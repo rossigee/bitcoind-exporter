@@ -178,18 +178,6 @@ func runValidationTest(t *testing.T, tt struct {
 	}
 }
 
-// restoreEnvironment restores the original environment variables
-func restoreEnvironment(oldEnv []string) {
-	os.Clearenv()
-	for _, env := range oldEnv {
-		if len(env) > 0 {
-			parts := strings.SplitN(env, "=", 2)
-			if len(parts) == 2 {
-				_ = os.Setenv(parts[0], parts[1])
-			}
-		}
-	}
-}
 
 // setupTestEnvironment sets up environment variables for testing
 func setupTestEnvironment(rpcUser, rpcPass, cookieFile string) {

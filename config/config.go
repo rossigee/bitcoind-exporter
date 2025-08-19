@@ -227,11 +227,19 @@ func loadConfiguration() {
 		log.Debug("Legacy configuration loaded")
 		C = config
 	} else {
-		log.Fatal(err)
+		log.Error("Failed to parse configuration:", err)
+		panic(err)
 	}
 
 	if C.RPCUser == "" && C.RPCPass == "" && C.RPCCookieFile == "" {
-		log.Fatal("RPC_USER and RPC_PASS or RPC_COOKIE_FILE must be set")
+		log.Error("RPC_USER and RPC_PASS or RPC_COOKIE_FILE must be set")
+		panic("RPC_USER and RPC_PASS or RPC_COOKIE_FILE must be set")
+	}
+
+	// Validate that if user/pass auth is being used, both must be provided
+	if (C.RPCUser != "" || C.RPCPass != "") && (C.RPCUser == "" || C.RPCPass == "") && C.RPCCookieFile == "" {
+		log.Error("Both RPC_USER and RPC_PASS must be provided when using username/password authentication")
+		panic("Both RPC_USER and RPC_PASS must be provided when using username/password authentication")
 	}
 }
 

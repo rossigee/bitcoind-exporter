@@ -40,6 +40,75 @@ This tool is configured via environment variables. Some environment variables ar
 
 Please note that either `RPC_USER` and `RPC_PASS` or `RPC_COOKIE_FILE` must be set.
 
+### Additional Security Configuration
+
+| Variable              | Description                                           | Required | Default |
+| --------------------- | ---------------------------------------------------- | -------- | ------- |
+| `ALLOWED_IPS`         | Comma-separated list of allowed IP addresses/CIDRs   | ❌       |         |
+| `DENIED_IPS`          | Comma-separated list of denied IP addresses/CIDRs    | ❌       |         |
+| `READ_TIMEOUT`        | HTTP server read timeout                             | ❌       | `10s`   |
+| `WRITE_TIMEOUT`       | HTTP server write timeout                            | ❌       | `10s`   |
+| `IDLE_TIMEOUT`        | HTTP server idle timeout                             | ❌       | `60s`   |
+| `READ_HEADER_TIMEOUT` | HTTP server read header timeout                      | ❌       | `5s`    |
+
+### Configuration Examples
+
+#### Basic Username/Password Authentication
+```bash
+export RPC_ADDRESS="http://localhost:8332"
+export RPC_USER="bitcoin"
+export RPC_PASS="your_password"
+export METRICS_PORT="3000"
+export LOG_LEVEL="info"
+```
+
+#### Cookie-Based Authentication
+```bash
+export RPC_ADDRESS="http://localhost:8332"
+export RPC_COOKIE_FILE="/home/bitcoin/.bitcoin/.cookie"
+export ZMQ_ADDRESS="tcp://localhost:28333"
+export METRICS_PORT="3000"
+```
+
+#### Production Security Configuration
+```bash
+# Bitcoin RPC Configuration
+export RPC_ADDRESS="https://localhost:8332"
+export RPC_USER="bitcoin"
+export RPC_PASS="secure_password_here"
+
+# TLS Configuration
+export TLS_ENABLED="true"
+export TLS_CERT_FILE="/etc/ssl/certs/bitcoin-exporter.pem"
+export TLS_KEY_FILE="/etc/ssl/private/bitcoin-exporter.key"
+export TLS_MIN_VERSION="1.3"
+
+# HTTP Authentication
+export AUTH_ENABLED="true"
+export AUTH_USERNAME="prometheus"
+export AUTH_PASSWORD="very_secure_password_123"
+
+# Rate Limiting
+export RATE_LIMIT_ENABLED="true"
+export RATE_LIMIT_REQUESTS="100"
+export RATE_LIMIT_WINDOW="1m"
+export RATE_LIMIT_BLOCK_TIME="5m"
+
+# IP Filtering
+export ALLOWED_IPS="10.0.0.0/8,192.168.1.0/24,127.0.0.1"
+export DENIED_IPS="192.168.1.100"
+
+# Server Timeouts
+export READ_TIMEOUT="30s"
+export WRITE_TIMEOUT="30s"
+export IDLE_TIMEOUT="120s"
+
+# Application Configuration
+export ENVIRONMENT="production"
+export LOG_LEVEL="warn"
+export METRICS_PORT="3000"
+```
+
 ## 🔗 Endpoints
 
 The exporter provides several endpoints:
@@ -49,6 +118,21 @@ The exporter provides several endpoints:
 | `/metrics` | Prometheus metrics endpoint                                   |
 | `/health`  | Health check endpoint (always returns HTTP 200)               |
 | `/ready`   | Readiness check endpoint (validates Bitcoin RPC connectivity) |
+
+### Health Check Details
+
+The health endpoints provide different levels of health information:
+
+- **`/health`**: Basic liveness check that always returns HTTP 200
+- **`/ready`**: Comprehensive readiness check that validates:
+  - Bitcoin RPC connectivity and authentication
+  - ZMQ endpoint reachability (if enabled)
+  - TLS certificate validity (if enabled)
+  - Metrics port availability
+  - Configuration validation
+  - Rate limiting functionality (if enabled)
+
+The readiness endpoint returns detailed JSON status information including individual check results, response times, and error details.
 
 ## 🔒 Security Features
 
