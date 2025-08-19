@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -258,9 +259,20 @@ func IsIPAllowed(clientIP string) bool {
 
 // matchesIP checks if a client IP matches an allowed/denied IP pattern
 func matchesIP(clientIP, pattern string) bool {
-	// Remove port from client IP if present
-	if idx := strings.LastIndex(clientIP, ":"); idx != -1 {
-		clientIP = clientIP[:idx]
+	// Handle IPv6 addresses with brackets and ports like [::1]:8080
+	if strings.HasPrefix(clientIP, "[") {
+		if idx := strings.LastIndex(clientIP, "]:"); idx != -1 {
+			clientIP = clientIP[1:idx] // Remove brackets and port
+		} else if strings.HasSuffix(clientIP, "]") {
+			clientIP = clientIP[1 : len(clientIP)-1] // Remove brackets only
+		}
+	} else {
+		// For IPv4, remove port if present (but be careful with IPv6)
+		if strings.Count(clientIP, ":") == 1 {
+			if idx := strings.LastIndex(clientIP, ":"); idx != -1 {
+				clientIP = clientIP[:idx]
+			}
+		}
 	}
 
 	// Exact match
@@ -268,8 +280,20 @@ func matchesIP(clientIP, pattern string) bool {
 		return true
 	}
 
-	// CIDR notation would require net package - simplified for now
-	// TODO: Implement proper CIDR matching
+	// CIDR notation matching
+	if strings.Contains(pattern, "/") {
+		_, cidr, err := net.ParseCIDR(pattern)
+		if err != nil {
+			return false
+		}
+		
+		ip := net.ParseIP(clientIP)
+		if ip == nil {
+			return false
+		}
+		
+		return cidr.Contains(ip)
+	}
 
 	return false
 }

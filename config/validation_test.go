@@ -803,3 +803,171 @@ func TestValidationError_Error(t *testing.T) {
 	expected := "configuration validation failed for field 'test_field' with value 'test_value': test message"
 	assert.Equal(t, expected, err.Error())
 }
+
+func TestMatchesIP(t *testing.T) {
+	tests := getMatchesIPTestCases()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := matchesIP(tt.clientIP, tt.pattern)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func getMatchesIPTestCases() []struct {
+	name     string
+	clientIP string
+	pattern  string
+	expected bool
+} {
+	basicTests := getBasicIPMatchTests()
+	cidrTests := getCIDRMatchTests()
+	ipv6Tests := getIPv6MatchTests()
+	edgeTests := getIPMatchEdgeTests()
+	
+	return append(append(append(basicTests, cidrTests...), ipv6Tests...), edgeTests...)
+}
+
+func getBasicIPMatchTests() []struct {
+	name     string
+	clientIP string
+	pattern  string
+	expected bool
+} {
+	return []struct {
+		name     string
+		clientIP string
+		pattern  string
+		expected bool
+	}{
+		{
+			name:     "Exact IP match",
+			clientIP: "192.168.1.100",
+			pattern:  "192.168.1.100",
+			expected: true,
+		},
+		{
+			name:     "IP with port matches exact IP",
+			clientIP: "192.168.1.100:8080",
+			pattern:  "192.168.1.100",
+			expected: true,
+		},
+		{
+			name:     "Different IPs don't match",
+			clientIP: "192.168.1.100",
+			pattern:  "192.168.1.101",
+			expected: false,
+		},
+	}
+}
+
+func getCIDRMatchTests() []struct {
+	name     string
+	clientIP string
+	pattern  string
+	expected bool
+} {
+	return []struct {
+		name     string
+		clientIP string
+		pattern  string
+		expected bool
+	}{
+		{
+			name:     "CIDR match - client in subnet",
+			clientIP: "192.168.1.100",
+			pattern:  "192.168.1.0/24",
+			expected: true,
+		},
+		{
+			name:     "CIDR match - client in subnet with port",
+			clientIP: "192.168.1.100:8080",
+			pattern:  "192.168.1.0/24",
+			expected: true,
+		},
+		{
+			name:     "CIDR no match - client outside subnet",
+			clientIP: "192.168.2.100",
+			pattern:  "192.168.1.0/24",
+			expected: false,
+		},
+		{
+			name:     "CIDR /32 exact match",
+			clientIP: "192.168.1.100",
+			pattern:  "192.168.1.100/32",
+			expected: true,
+		},
+		{
+			name:     "CIDR /32 no match",
+			clientIP: "192.168.1.100",
+			pattern:  "192.168.1.101/32",
+			expected: false,
+		},
+		{
+			name:     "Localhost CIDR",
+			clientIP: "127.0.0.1",
+			pattern:  "127.0.0.0/8",
+			expected: true,
+		},
+	}
+}
+
+func getIPv6MatchTests() []struct {
+	name     string
+	clientIP string
+	pattern  string
+	expected bool
+} {
+	return []struct {
+		name     string
+		clientIP string
+		pattern  string
+		expected bool
+	}{
+		{
+			name:     "IPv6 exact match",
+			clientIP: "2001:db8::1",
+			pattern:  "2001:db8::1",
+			expected: true,
+		},
+		{
+			name:     "IPv6 CIDR match",
+			clientIP: "2001:db8::1",
+			pattern:  "2001:db8::/32",
+			expected: true,
+		},
+		{
+			name:     "IPv6 CIDR no match",
+			clientIP: "2001:db9::1",
+			pattern:  "2001:db8::/32",
+			expected: false,
+		},
+	}
+}
+
+func getIPMatchEdgeTests() []struct {
+	name     string
+	clientIP string
+	pattern  string
+	expected bool
+} {
+	return []struct {
+		name     string
+		clientIP string
+		pattern  string
+		expected bool
+	}{
+		{
+			name:     "Invalid CIDR pattern",
+			clientIP: "192.168.1.100",
+			pattern:  "192.168.1.0/invalid",
+			expected: false,
+		},
+		{
+			name:     "Invalid client IP",
+			clientIP: "invalid-ip",
+			pattern:  "192.168.1.0/24",
+			expected: false,
+		},
+	}
+}

@@ -2,9 +2,16 @@ package config
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -359,10 +366,22 @@ func (m *ConfigHealthMonitor) checkTLSCertificate(ctx context.Context) (HealthSt
 		return StatusUnhealthy, "TLS key file not specified", fmt.Errorf("key file empty")
 	}
 
-	// TODO: Add actual certificate validation
-	// This would include checking file existence, readability, expiration, etc.
+	// Validate certificate file existence and readability
+	if err := validateCertificateFile(m.config.Security.TLSCertFile); err != nil {
+		return StatusUnhealthy, "TLS certificate validation failed", err
+	}
 
-	return StatusHealthy, "TLS configuration appears valid", nil
+	// Validate key file existence and readability
+	if err := validateKeyFile(m.config.Security.TLSKeyFile); err != nil {
+		return StatusUnhealthy, "TLS key validation failed", err
+	}
+
+	// Validate certificate and key compatibility
+	if err := validateCertKeyPair(m.config.Security.TLSCertFile, m.config.Security.TLSKeyFile); err != nil {
+		return StatusUnhealthy, "TLS certificate/key pair validation failed", err
+	}
+
+	return StatusHealthy, "TLS configuration validated successfully", nil
 }
 
 // checkPortAvailability checks if the metrics port is available
@@ -419,4 +438,130 @@ func (m *ConfigHealthMonitor) GetHealthSummary() map[string]interface{} {
 	}
 
 	return summary
+}
+
+// Certificate validation helper functions
+
+// validateCertificateFile validates that a certificate file exists, is readable, and contains valid certificate data
+func validateCertificateFile(certFile string) error {
+	// Validate file path for security
+	if certFile == "" || strings.Contains(certFile, "..") {
+		return fmt.Errorf("invalid certificate file path")
+	}
+
+	// Check file existence
+	if _, err := os.Stat(certFile); err != nil {
+		return fmt.Errorf("certificate file not accessible: %w", err)
+	}
+
+	// Read and parse certificate
+	certPEM, err := os.ReadFile(certFile) // #nosec G304 - file path validated above
+	if err != nil {
+		return fmt.Errorf("failed to read certificate file: %w", err)
+	}
+
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return fmt.Errorf("failed to decode PEM block containing certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse certificate: %w", err)
+	}
+
+	// Check certificate expiration
+	now := time.Now()
+	if now.Before(cert.NotBefore) {
+		return fmt.Errorf("certificate is not yet valid (valid from %s)", cert.NotBefore.Format(time.RFC3339))
+	}
+	if now.After(cert.NotAfter) {
+		return fmt.Errorf("certificate has expired (expired on %s)", cert.NotAfter.Format(time.RFC3339))
+	}
+
+	// Warn if certificate expires soon (within 30 days)
+	if now.Add(30 * 24 * time.Hour).After(cert.NotAfter) {
+		// Log warning but don't fail the health check
+		log.WithField("expiry", cert.NotAfter.Format(time.RFC3339)).
+			Warning("TLS certificate expires within 30 days")
+	}
+
+	return nil
+}
+
+// validateKeyFile validates that a private key file exists, is readable, and contains valid key data
+func validateKeyFile(keyFile string) error {
+	// Validate file path for security
+	if keyFile == "" || strings.Contains(keyFile, "..") {
+		return fmt.Errorf("invalid key file path")
+	}
+
+	// Check file existence
+	if _, err := os.Stat(keyFile); err != nil {
+		return fmt.Errorf("key file not accessible: %w", err)
+	}
+
+	// Read key file
+	keyPEM, err := os.ReadFile(keyFile) // #nosec G304 - file path validated above
+	if err != nil {
+		return fmt.Errorf("failed to read key file: %w", err)
+	}
+
+	block, _ := pem.Decode(keyPEM)
+	if block == nil {
+		return fmt.Errorf("failed to decode PEM block containing private key")
+	}
+
+	// Try to parse as different key types
+	_, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		_, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			_, err = x509.ParseECPrivateKey(block.Bytes)
+			if err != nil {
+				return fmt.Errorf("failed to parse private key: key type not supported")
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateCertKeyPair validates that a certificate and private key are compatible
+func validateCertKeyPair(certFile, keyFile string) error {
+	// Load certificate and key pair
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return fmt.Errorf("failed to load certificate/key pair: %w", err)
+	}
+
+	// Parse the certificate to get public key
+	x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return fmt.Errorf("failed to parse certificate for validation: %w", err)
+	}
+
+	// Verify the private key matches the certificate's public key
+	switch pub := x509Cert.PublicKey.(type) {
+	case *rsa.PublicKey:
+		priv, ok := cert.PrivateKey.(*rsa.PrivateKey)
+		if !ok {
+			return fmt.Errorf("certificate has RSA public key but private key is not RSA")
+		}
+		if pub.N.Cmp(priv.N) != 0 {
+			return fmt.Errorf("RSA private key does not match certificate public key")
+		}
+	case *ecdsa.PublicKey:
+		priv, ok := cert.PrivateKey.(*ecdsa.PrivateKey)
+		if !ok {
+			return fmt.Errorf("certificate has ECDSA public key but private key is not ECDSA")
+		}
+		if pub.X.Cmp(priv.X) != 0 || pub.Y.Cmp(priv.Y) != 0 {
+			return fmt.Errorf("ECDSA private key does not match certificate public key")
+		}
+	default:
+		return fmt.Errorf("unsupported public key type: %T", pub)
+	}
+
+	return nil
 }
