@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  bitcoind:
+    image: bitcoin/bitcoin:25.0
+    container_name: bitcoind-regtest
+    command: >
+      bitcoind -regtest
+      -rpcuser=test
+      -rpcpassword=test
+      -rpcallowip=0.0.0.0/0
+      -rpcbind=0.0.0.0:18443
+      -zmqpubhashtx=tcp://*:28332
+      -zmqpubhashblock=tcp://*:28333
+      -server=1
+      -txindex=1
+      -rest=1
+      -fallbackfee=0.00001
+    ports:
+      - "18443:18443"  # RPC port
+      - "28332:28332"  # ZMQ hash transactions
+      - "28333:28333"  # ZMQ hash blocks
+    volumes:
+      - bitcoin_data:/home/bitcoin/.bitcoin
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=test", "-rpcpassword=test", "getblockchaininfo"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bitcoind-exporter-dev
+    environment:
+      - RPC_ADDRESS=http://bitcoind:18443
+      - RPC_USER=test
+      - RPC_PASS=test
+      - ZMQ_ADDRESS=bitcoind:28332
+      - FETCH_INTERVAL=5
+      - LOG_LEVEL=debug
+      # Security settings for development
+      - TLS_ENABLED=false
+      - AUTH_ENABLED=false
+      - RATE_LIMIT_ENABLED=false
+    ports:
+      - "3000:3000"
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus-dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.dev.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - exporter
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: grafana-dev
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  bitcoin_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  default:
+    name: bitcoind-dev

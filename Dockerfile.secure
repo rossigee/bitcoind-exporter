@@ -1,0 +1,57 @@
+# Multi-stage build with security hardening
+FROM golang:1.25-alpine AS build
+
+# Security: Create non-root user for build
+RUN adduser -D -g '' appuser
+
+# Security: Install only necessary packages
+RUN apk add --no-cache ca-certificates git
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files first for better caching
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download && go mod verify
+
+# Copy source code
+COPY . .
+
+# Security: Build with security flags
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o bitcoind-exporter .
+
+# Final stage - minimal security-hardened image
+FROM scratch
+
+# Security: Import from builder for SSL/TLS certificates
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Security: Copy passwd for non-root user
+COPY --from=build /etc/passwd /etc/passwd
+
+# Copy binary
+COPY --from=build /app/bitcoind-exporter /bitcoind-exporter
+
+# Security: Use non-root user
+USER appuser
+
+# Security: Expose only necessary port
+EXPOSE 3000
+
+# Security: Use specific entrypoint
+ENTRYPOINT ["/bitcoind-exporter"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ["/bitcoind-exporter", "--health-check"] || exit 1
+
+# Security labels
+LABEL maintainer="bitcoind-exporter" \
+      version="2.0" \
+      description="Secure Bitcoin node Prometheus exporter" \
+      security.scan="enabled"

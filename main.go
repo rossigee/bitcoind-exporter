@@ -11,12 +11,18 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-func init() {
+// Logger configuration constants
+const (
+	logFormatterSpacePadding = 45 // Space padding for log formatter
+)
+
+// setupLogging configures the logging system
+func setupLogging() {
 	log.SetFormatter(&prefixed.TextFormatter{
 		TimestampFormat:  "2006/01/02 - 15:04:05",
 		FullTimestamp:    true,
 		QuoteEmptyFields: true,
-		SpacePadding:     45,
+		SpacePadding:     logFormatterSpacePadding,
 	})
 
 	log.SetReportCaller(true)
@@ -30,6 +36,8 @@ func init() {
 }
 
 func main() {
+	config.InitializeConfig()
+	setupLogging()
 	log.WithFields(log.Fields{
 		"commit":  commit,
 		"runtime": runtime.Version(),

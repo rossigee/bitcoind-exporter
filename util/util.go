@@ -19,11 +19,14 @@ func AnyNil(params ...interface{}) bool {
 		}
 
 		v := reflect.ValueOf(param)
+		//nolint:exhaustive // Only checking nilable types
 		switch v.Kind() {
 		case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func:
 			if v.IsNil() {
 				return true
 			}
+		default:
+			// Other types cannot be nil, so continue checking
 		}
 	}
 	return false

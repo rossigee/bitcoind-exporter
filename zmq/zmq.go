@@ -23,7 +23,7 @@ func Start() {
 	}
 
 	sub := zmq4.NewSub(context.Background())
-	defer sub.Close()
+	defer func() { _ = sub.Close() }()
 
 	err := sub.Dial("tcp://" + address)
 	if err != nil {
