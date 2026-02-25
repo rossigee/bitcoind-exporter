@@ -165,8 +165,9 @@ jobs:
       with:
         context: .
         file: ./Dockerfile.secure
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         push: false
+        load: true
         tags: |
           bitcoind-exporter:latest
           bitcoind-exporter:${{ github.sha }}
