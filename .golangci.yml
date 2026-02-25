@@ -1,10 +1,9 @@
+version: 2
+
 run:
   timeout: 5m
   modules-download-mode: readonly
-  go: '1.25'
-
-# Configuration format version
-version: 2
+  go: '1.26'
 
 linters-settings:
   govet:
@@ -28,9 +27,6 @@ linters-settings:
       - unsafeptr
       - unusedresult
 
-  golint:
-    min-confidence: 0.8
-
   goimports:
     local-prefixes: github.com/Primexz/bitcoind-exporter
 
@@ -53,9 +49,6 @@ linters-settings:
   gocognit:
     min-complexity: 20
 
-  maligned:
-    suggest-new: true
-
   dupl:
     threshold: 100
 
@@ -75,9 +68,6 @@ linters-settings:
 
   lll:
     line-length: 140
-
-  unused:
-    go: "1.25"
 
   unparam:
     check-exported: false
@@ -157,7 +147,6 @@ issues:
     - path: fetcher/mocks\.go
       linters:
         - unused
-        - deadcode
 
     - path: fetcher/interfaces\.go
       linters:
@@ -176,6 +165,6 @@ issues:
   max-same-issues: 0
 
 output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
+  formats:
+    text:
+      path: stderr
