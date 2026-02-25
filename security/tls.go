@@ -300,7 +300,7 @@ type SecurityConfig struct {
 type AuthConfig struct {
 	Enabled  bool   `env:"AUTH_ENABLED" envDefault:"false"`
 	Username string `env:"AUTH_USERNAME"`
-	Password string `env:"AUTH_PASSWORD"`
+	Password string `env:"AUTH_PASSWORD"` // #nosec G117 -- config field, not a hardcoded secret
 }
 
 // CreateSecureHandler wraps a handler with all security middleware

@@ -306,7 +306,7 @@ func (m *ConfigHealthMonitor) checkRPCConnectivity(ctx context.Context) (HealthS
 		return StatusUnhealthy, "Failed to create request", err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL comes from trusted application config, not user input
 	if err != nil {
 		return StatusUnhealthy, "Connection failed", err
 	}

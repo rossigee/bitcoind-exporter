@@ -14,7 +14,7 @@ import (
 type RPCConfig struct {
 	Address    string        `env:"RPC_ADDRESS,required"`
 	User       string        `env:"RPC_USER"`
-	Pass       string        `env:"RPC_PASS"`
+	Pass       string        `env:"RPC_PASS"` // #nosec G117 -- config field, not a hardcoded secret
 	CookieFile string        `env:"RPC_COOKIE_FILE"`
 	Timeout    time.Duration `env:"RPC_TIMEOUT" envDefault:"30s"`
 }
