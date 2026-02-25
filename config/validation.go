@@ -296,7 +296,7 @@ func (v *Validator) validateAppConfig(app *AppConfig, result *ValidationResult) 
 	validLogLevels := []string{"trace", "debug", "info", "warn", "error", "fatal", "panic"}
 	isValidLevel := false
 	for _, level := range validLogLevels {
-		if strings.ToLower(app.LogLevel) == level {
+		if strings.EqualFold(app.LogLevel, level) {
 			isValidLevel = true
 			break
 		}
@@ -308,7 +308,7 @@ func (v *Validator) validateAppConfig(app *AppConfig, result *ValidationResult) 
 	}
 
 	// Environment-specific warnings
-	if strings.ToLower(app.LogLevel) == "debug" && v.strictMode {
+	if strings.EqualFold(app.LogLevel, "debug") && v.strictMode {
 		result.AddWarning("Debug logging enabled. Consider using 'info' level for production")
 	}
 
@@ -317,7 +317,7 @@ func (v *Validator) validateAppConfig(app *AppConfig, result *ValidationResult) 
 		validEnvs := []string{"development", "staging", "production"}
 		isValidEnv := false
 		for _, env := range validEnvs {
-			if strings.ToLower(app.Environment) == env {
+			if strings.EqualFold(app.Environment, env) {
 				isValidEnv = true
 				break
 			}
@@ -364,7 +364,7 @@ func (v *Validator) validateCrossFieldDependencies(cfg *Config, result *Validati
 	}
 
 	// Production readiness checks
-	if v.strictMode && strings.ToLower(cfg.App.Environment) == "production" {
+	if v.strictMode && strings.EqualFold(cfg.App.Environment, "production") {
 		if !cfg.Security.TLSEnabled {
 			result.AddError("PRODUCTION_TLS", "false",
 				"TLS must be enabled in production environment")
@@ -375,7 +375,7 @@ func (v *Validator) validateCrossFieldDependencies(cfg *Config, result *Validati
 				"Authentication must be enabled in production environment")
 		}
 
-		if strings.ToLower(cfg.App.LogLevel) == "debug" || strings.ToLower(cfg.App.LogLevel) == "trace" {
+		if strings.EqualFold(cfg.App.LogLevel, "debug") || strings.EqualFold(cfg.App.LogLevel, "trace") {
 			result.AddError("PRODUCTION_LOG_LEVEL", cfg.App.LogLevel,
 				"Debug/trace logging should not be used in production")
 		}
@@ -416,13 +416,13 @@ func (v *Validator) isValidIPOrCIDR(ipStr string) bool {
 }
 
 // ValidateAndReport validates configuration and returns formatted report
-func (v *Validator) ValidateAndReport(cfg *Config) (bool, string, error) {
+func (v *Validator) ValidateAndReport(cfg *Config) (valid bool, output string, err error) {
 	result := v.ValidateConfig(cfg)
 
 	if !result.Valid {
 		var errorMsgs []string
-		for _, err := range result.Errors {
-			errorMsgs = append(errorMsgs, err.Error())
+		for _, e := range result.Errors {
+			errorMsgs = append(errorMsgs, e.Error())
 		}
 		return false, "", errors.New(strings.Join(errorMsgs, "; "))
 	}

@@ -195,7 +195,7 @@ func (m *ConfigHealthMonitor) monitorLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			m.logger.Info("Context cancelled, stopping health monitor")
+			m.logger.Info("Context canceled, stopping health monitor")
 			return
 		case <-m.stopChan:
 			m.logger.Info("Stop signal received, stopping health monitor")
@@ -301,7 +301,7 @@ func (m *ConfigHealthMonitor) checkRPCConnectivity(ctx context.Context) (HealthS
 		Timeout: httpClientTimeout,
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", m.config.RPC.Address, nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", m.config.RPC.Address, http.NoBody)
 	if err != nil {
 		return StatusUnhealthy, "Failed to create request", err
 	}

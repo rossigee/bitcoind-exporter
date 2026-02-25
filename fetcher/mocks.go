@@ -75,7 +75,7 @@ func (m *MockBitcoinRPCClient) CallFor(ctx context.Context, result interface{},
 }
 
 // assignResponse handles type assertion and assignment for mock responses
-func (m *MockBitcoinRPCClient) assignResponse(result interface{}, response interface{}) error {
+func (m *MockBitcoinRPCClient) assignResponse(result, response interface{}) error {
 	// Try to assign blockchain info types
 	if m.assignBlockchainTypes(result, response) {
 		return nil
@@ -93,7 +93,7 @@ func (m *MockBitcoinRPCClient) assignResponse(result interface{}, response inter
 }
 
 // assignBlockchainTypes handles blockchain-related type assignments
-func (m *MockBitcoinRPCClient) assignBlockchainTypes(result interface{}, response interface{}) bool {
+func (m *MockBitcoinRPCClient) assignBlockchainTypes(result, response interface{}) bool {
 	switch v := result.(type) {
 	case *BlockchainInfo:
 		if resp, ok := response.(*BlockchainInfo); ok {
@@ -140,7 +140,7 @@ func (m *MockBitcoinRPCClient) assignBlockchainTypes(result interface{}, respons
 }
 
 // assignNetworkTypes handles network and fee-related type assignments
-func (m *MockBitcoinRPCClient) assignNetworkTypes(result interface{}, response interface{}) bool {
+func (m *MockBitcoinRPCClient) assignNetworkTypes(result, response interface{}) bool {
 	switch v := result.(type) {
 	case *NetworkInfo:
 		if resp, ok := response.(*NetworkInfo); ok {
@@ -177,7 +177,7 @@ func (m *MockBitcoinRPCClient) assignNetworkTypes(result interface{}, response i
 }
 
 // assignPrimitiveTypes handles primitive type assignments
-func (m *MockBitcoinRPCClient) assignPrimitiveTypes(result interface{}, response interface{}) {
+func (m *MockBitcoinRPCClient) assignPrimitiveTypes(result, response interface{}) {
 	switch v := result.(type) {
 	case *float64:
 		if resp, ok := response.(float64); ok {

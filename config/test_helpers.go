@@ -88,7 +88,7 @@ func createTestCertificates(t *testing.T) (certFile, keyFile string) {
 func restoreEnvironment(oldEnv []string) {
 	os.Clearenv()
 	for _, env := range oldEnv {
-		if len(env) > 0 {
+		if env != "" {
 			parts := strings.SplitN(env, "=", envSplitParts)
 			if len(parts) == envSplitParts {
 				_ = os.Setenv(parts[0], parts[1])

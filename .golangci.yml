@@ -1,107 +1,103 @@
-version: 2
+version: "2"
 
 run:
   timeout: 5m
   modules-download-mode: readonly
   go: '1.26'
 
-linters-settings:
-  govet:
-    enable:
-      - atomic
-      - bools
-      - buildtag
-      - copylocks
-      - fieldalignment
-      - httpresponse
-      - loopclosure
-      - lostcancel
-      - nilfunc
-      - printf
-      - shift
-      - stdmethods
-      - structtag
-      - tests
-      - unmarshal
-      - unreachable
-      - unsafeptr
-      - unusedresult
-
-  goimports:
-    local-prefixes: github.com/Primexz/bitcoind-exporter
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-
-  gocyclo:
-    min-complexity: 15
-
-  gocognit:
-    min-complexity: 20
-
-  dupl:
-    threshold: 100
-
-  goconst:
-    min-len: 2
-    min-occurrences: 3
-
-  depguard:
-    rules:
-      main:
-        deny:
-          - pkg: "log"
-            desc: "Use logrus for structured logging"
-
-  misspell:
-    locale: US
-
-  lll:
-    line-length: 140
-
-  unparam:
-    check-exported: false
-
-  nakedret:
-    max-func-lines: 30
-
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: false
-
-  gomodguard:
-    blocked:
-      modules:
-        - github.com/golang/protobuf:
-            recommendations:
-              - google.golang.org/protobuf
-            reason: "Use the new protobuf module"
-
-  godox:
-    keywords:
-      - NOTE
-      - OPTIMIZE
-      - HACK
-
-  dogsled:
-    max-blank-identifiers: 2
-
-  whitespace:
-    multi-if: false
-    multi-func: false
-
 linters:
+  settings:
+    govet:
+      enable:
+        - atomic
+        - bools
+        - buildtag
+        - copylocks
+        - httpresponse
+        - loopclosure
+        - lostcancel
+        - nilfunc
+        - printf
+        - shift
+        - stdmethods
+        - structtag
+        - tests
+        - unmarshal
+        - unreachable
+        - unsafeptr
+        - unusedresult
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - dupImport # https://github.com/go-critic/go-critic/issues/845
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+
+    gocyclo:
+      min-complexity: 20
+
+    gocognit:
+      min-complexity: 20
+
+    dupl:
+      threshold: 100
+
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: "log"
+              desc: "Use logrus for structured logging"
+
+    misspell:
+      locale: US
+
+    lll:
+      line-length: 140
+
+    unparam:
+      check-exported: false
+
+    nakedret:
+      max-func-lines: 30
+
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+
+    gomodguard:
+      blocked:
+        modules:
+          - github.com/golang/protobuf:
+              recommendations:
+                - google.golang.org/protobuf
+              reason: "Use the new protobuf module"
+
+    godox:
+      keywords:
+        - NOTE
+        - OPTIMIZE
+        - HACK
+
+    dogsled:
+      max-blank-identifiers: 2
+
+    whitespace:
+      multi-if: false
+      multi-func: false
+
   enable:
     - bodyclose
     - copyloopvar
@@ -135,32 +131,33 @@ linters:
     - depguard # allow all imports for now
     - godox # allow TODO comments
 
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - mnd
+          - goconst
+          - funlen
+          - lll
+          - gocritic
+
+      - path: fetcher/mocks\.go
+        linters:
+          - unused
+
+      - path: fetcher/interfaces\.go
+        linters:
+          - unused
+
+      - text: "weak cryptographic primitive"
+        linters:
+          - gosec
+
+      - text: "G404: Use of weak random number generator"
+        linters:
+          - gosec
+
 issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - mnd
-        - goconst
-        - funlen
-        - lll
-
-    - path: fetcher/mocks\.go
-      linters:
-        - unused
-
-    - path: fetcher/interfaces\.go
-      linters:
-        - unused
-
-    - text: "weak cryptographic primitive"
-      linters:
-        - gosec
-
-    - text: "G404: Use of weak random number generator"
-      linters:
-        - gosec
-
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
 

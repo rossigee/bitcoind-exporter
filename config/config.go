@@ -143,7 +143,7 @@ func LoadConfig() (*Config, error) {
 func ValidateConfig(cfg *Config) error {
 	if validator == nil {
 		// Determine if we should use strict mode
-		strictMode := strings.ToLower(cfg.App.Environment) == "production"
+		strictMode := strings.EqualFold(cfg.App.Environment, "production")
 		validator = NewValidator(strictMode)
 	}
 
