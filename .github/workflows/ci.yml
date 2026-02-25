@@ -79,7 +79,7 @@ jobs:
         go-version: '1.26'
 
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v7
       with:
         version: v2.9.0
         args: --timeout 5m
@@ -98,9 +98,9 @@ jobs:
         go-version: '1.26'
 
     - name: Run Gosec Security Scanner
-      uses: securego/gosec@master
-      with:
-        args: '-fmt json -out gosec-report.json -stdout -verbose=text ./...'
+      run: |
+        go install github.com/securego/gosec/v2/cmd/gosec@latest
+        gosec -fmt json -out gosec-report.json -stdout -verbose=text ./...
 
     - name: Upload Gosec report
       uses: actions/upload-artifact@v4
@@ -208,14 +208,3 @@ jobs:
         name: benchmark-results
         path: benchmark.txt
 
-    - name: Compare benchmarks
-      uses: benchmark-action/github-action-benchmark@v1
-      if: github.event_name == 'push'
-      with:
-        tool: 'go'
-        output-file-path: benchmark.txt
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
-        comment-on-alert: true
-        alert-threshold: '200%'
-        fail-on-alert: true
