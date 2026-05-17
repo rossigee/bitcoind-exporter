@@ -32,8 +32,7 @@ func computeBasicAuth() string {
 	cookieFile := config.C.RPCCookieFile
 
 	if cookieFile != "" {
-		//gosec:disable G304 -- Configured by the user
-		cookie, err := os.ReadFile(cookieFile)
+		cookie, err := os.ReadFile(cookieFile) // #nosec G304 -- path is operator-configured
 		if err != nil {
 			log.WithError(err).Fatal("Failed to read cookie file")
 			return ""
@@ -41,7 +40,7 @@ func computeBasicAuth() string {
 		cookieStr := strings.TrimSpace(string(cookie))
 
 		if !strings.Contains(cookieStr, ":") {
-			log.WithError(err).Fatal("Invalid cookie file format")
+			log.Fatal("Invalid cookie file format: missing ':' separator")
 			return ""
 		}
 

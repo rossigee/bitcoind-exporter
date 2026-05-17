@@ -44,6 +44,12 @@ func Start() {
 			log.WithError(err).Fatal("could not receive")
 		}
 
+		// ZMQ multipart: [topic, payload, sequence]. Guard against malformed messages.
+		if len(msg.Frames) < 2 {
+			log.WithField("frames", len(msg.Frames)).Warn("Received malformed zmq message, skipping")
+			continue
+		}
+
 		transaction := string(msg.Frames[1])
 		log.WithField("transaction", transaction).Debug("Received transaction")
 

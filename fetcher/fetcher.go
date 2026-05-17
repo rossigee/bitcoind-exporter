@@ -65,21 +65,21 @@ func (r *Runner) run() {
 	feeRate5 := r.getSmartFee(ctx, feeEstimation5Blocks)
 	feeRate20 := r.getSmartFee(ctx, feeEstimation20Blocks)
 
-	hasRateLatest := r.getNetworkHashrate(ctx, hashRateLatest)
-	hashRate1 := r.getNetworkHashrate(ctx, hashRate1Block)
-	hasthRate120 := r.getNetworkHashrate(ctx, hashRate120Blocks)
+	hashRateLatestVal := r.getNetworkHashrate(ctx, hashRateLatest)
+	hashRate1Val := r.getNetworkHashrate(ctx, hashRate1Block)
+	hashRate120Val := r.getNetworkHashrate(ctx, hashRate120Blocks)
 
 	netTotals := r.getNetTotals(ctx)
 
 	if util.AnyNil(blockChainInfo, memPoolInfo, memoryInfo, indexInfo, networkInfo,
-		feeRate2, feeRate5, feeRate20, hasRateLatest, hashRate1, hasthRate120, netTotals) {
+		feeRate2, feeRate5, feeRate20, netTotals) {
 		log.Error("Failed to fetch data")
 		return
 	}
 
 	// Update metrics
 	r.updateMetrics(blockChainInfo, memPoolInfo, memoryInfo, indexInfo, networkInfo, netTotals,
-		feeRate2, feeRate5, feeRate20, hasRateLatest, hashRate1, hasthRate120)
+		feeRate2, feeRate5, feeRate20, hashRateLatestVal, hashRate1Val, hashRate120Val)
 
 	// Internal
 	prometheus.ScrapeTime.Set(float64(time.Since(start).Milliseconds()))
@@ -88,7 +88,7 @@ func (r *Runner) run() {
 // updateMetrics updates all Prometheus metrics with fetched data
 func (r *Runner) updateMetrics(blockChainInfo *BlockchainInfo, memPoolInfo *MempoolInfo,
 	memoryInfo *MemoryInfo, indexInfo *IndexInfo, networkInfo *NetworkInfo, netTotals *NetTotals,
-	feeRate2, feeRate5, feeRate20 *SmartFee, hasRateLatest, hashRate1, hasthRate120 float64) {
+	feeRate2, feeRate5, feeRate20 *SmartFee, hasRateLatest, hashRate1, hashRate120 float64) {
 	// Blockchain
 	prometheus.BlockchainBlocks.Set(float64(blockChainInfo.Blocks))
 	prometheus.BlockchainHeaders.Set(float64(blockChainInfo.Headers))
@@ -127,7 +127,7 @@ func (r *Runner) updateMetrics(blockChainInfo *BlockchainInfo, memPoolInfo *Memp
 	// Mining
 	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "-1"}).Set(hasRateLatest)
 	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "1"}).Set(hashRate1)
-	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "120"}).Set(hasthRate120)
+	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "120"}).Set(hashRate120)
 }
 
 func (r *Runner) getBlockchainInfo(ctx context.Context) *BlockchainInfo {
