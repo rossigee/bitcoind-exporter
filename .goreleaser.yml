@@ -1,13 +1,45 @@
 project_name: bitcoind-exporter
+
 builds:
-  - env:
+  - id: bitcoind-exporter
+    env:
       - CGO_ENABLED=0
     binary: bitcoind-exporter
+    ldflags:
+      - -w -s -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
     goos:
       - linux
     goarch:
       - amd64
       - arm64
+
+nfpms:
+  - id: packages
+    builds:
+      - bitcoind-exporter
+    package_name: bitcoind-exporter
+    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    vendor: Ross Golder
+    homepage: https://github.com/rossigee/bitcoind-exporter
+    maintainer: Ross Golder <ross@golder.org>
+    description: |
+      Bitcoin node Prometheus exporter.
+      Exports Bitcoin Core RPC and ZMQ metrics in Prometheus format.
+    license: MIT
+    formats:
+      - deb
+    bindir: /usr/bin
+    contents:
+      - src: packaging/systemd/bitcoind-exporter.service
+        dst: /lib/systemd/system/bitcoind-exporter.service
+      - src: packaging/scripts/postinstall.sh
+        dst: /usr/share/bitcoind-exporter/postinstall.sh
+        file_info:
+          mode: 0755
+    scripts:
+      postinstall: packaging/scripts/postinstall.sh
+      preremove: packaging/scripts/preremove.sh
+
 dockers:
   - image_templates:
       - "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}-amd64"
@@ -22,6 +54,7 @@ dockers:
     dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/arm64/v8"
+
 docker_manifests:
   - name_template: "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}"
     image_templates:
