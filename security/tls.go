@@ -1,8 +1,11 @@
 package security
 
 import (
+	"crypto/subtle"
 	"crypto/tls"
+	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -74,31 +77,25 @@ func createTLSConfig(config *TLSConfig) *tls.Config {
 		return nil
 	}
 
-	var minVersion uint16 = tls.VersionTLS12
-	switch config.MinVersion {
-	case "1.0":
-		minVersion = tls.VersionTLS10
-	case "1.1":
-		minVersion = tls.VersionTLS11
-	case "1.2":
-		minVersion = tls.VersionTLS12
-	case "1.3":
+	// Only TLS 1.2+ is accepted; TLS 1.0/1.1 are insecure and disabled.
+	minVersion := tls.VersionTLS12
+	if config.MinVersion == "1.3" {
 		minVersion = tls.VersionTLS13
 	}
 
 	return &tls.Config{
-		MinVersion: minVersion,
+		MinVersion: uint16(minVersion),
 
-		// Secure cipher suites (TLS 1.2) - only forward secrecy enabled
+		// Forward-secrecy cipher suites for TLS 1.2; TLS 1.3 suites are
+		// controlled by Go's runtime and cannot be restricted here.
 		CipherSuites: []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 		},
-
-		// Security preferences
-		PreferServerCipherSuites: true,
-		InsecureSkipVerify:       false,
 
 		// Modern curves
 		CurvePreferences: []tls.CurveID{
@@ -164,7 +161,10 @@ func (am *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if user != am.username || pass != am.password {
+		// Use constant-time comparison to prevent timing attacks.
+		userMatch := subtle.ConstantTimeCompare([]byte(user), []byte(am.username))
+		passMatch := subtle.ConstantTimeCompare([]byte(pass), []byte(am.password))
+		if (userMatch & passMatch) != 1 {
 			am.logger.WithFields(logrus.Fields{
 				"user":      user,
 				"remote_ip": getClientIP(r),
@@ -182,20 +182,15 @@ func (am *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// getClientIP extracts the real client IP from the request
+// getClientIP extracts the client IP from the request's RemoteAddr.
+// X-Forwarded-For is intentionally ignored; it is client-controlled and
+// cannot be trusted for rate-limiting or access-control decisions.
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return xff
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
 	}
-
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-
-	// Fall back to RemoteAddr
-	return r.RemoteAddr
+	return host
 }
 
 // RateLimitConfig holds rate limiting configuration
@@ -206,11 +201,14 @@ type RateLimitConfig struct {
 	BlockTime  time.Duration `env:"RATE_LIMIT_BLOCK_TIME" envDefault:"5m"`
 }
 
-// RateLimiter provides basic rate limiting
+// RateLimiter provides basic rate limiting.
+// The clients map is protected by a RWMutex to prevent data races.
 type RateLimiter struct {
-	config  *RateLimitConfig
-	clients map[string]*clientState
-	logger  *logrus.Entry
+	config      *RateLimitConfig
+	clients     map[string]*clientState
+	mu          sync.RWMutex
+	lastCleanup time.Time
+	logger      *logrus.Entry
 }
 
 type clientState struct {
@@ -219,11 +217,14 @@ type clientState struct {
 	blocked  time.Time
 }
 
+const rateLimiterCleanupInterval = 5 * time.Minute
+
 // NewRateLimiter creates a new rate limiter
 func NewRateLimiter(config *RateLimitConfig) *RateLimiter {
 	return &RateLimiter{
-		config:  config,
-		clients: make(map[string]*clientState),
+		config:      config,
+		clients:     make(map[string]*clientState),
+		lastCleanup: time.Now(),
 		logger: logrus.WithFields(logrus.Fields{
 			"component": "rate_limiter",
 		}),
@@ -258,24 +259,33 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 }
 
 func (rl *RateLimiter) isBlocked(clientIP string) bool {
+	rl.mu.RLock()
 	state, exists := rl.clients[clientIP]
+	rl.mu.RUnlock()
 	if !exists {
 		return false
 	}
-
 	return time.Since(state.blocked) < rl.config.BlockTime
 }
 
 func (rl *RateLimiter) isRateLimited(clientIP string) bool {
 	now := time.Now()
-	state, exists := rl.clients[clientIP]
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	if !exists || now.Sub(state.window) > rl.config.WindowSize {
-		// New client or new window
-		rl.clients[clientIP] = &clientState{
-			requests: 1,
-			window:   now,
+	// Periodically evict stale entries to prevent unbounded map growth.
+	if now.Sub(rl.lastCleanup) > rateLimiterCleanupInterval {
+		for ip, state := range rl.clients {
+			if now.Sub(state.window) > rl.config.WindowSize && now.Sub(state.blocked) > rl.config.BlockTime {
+				delete(rl.clients, ip)
+			}
 		}
+		rl.lastCleanup = now
+	}
+
+	state, exists := rl.clients[clientIP]
+	if !exists || now.Sub(state.window) > rl.config.WindowSize {
+		rl.clients[clientIP] = &clientState{requests: 1, window: now}
 		return false
 	}
 
@@ -284,6 +294,8 @@ func (rl *RateLimiter) isRateLimited(clientIP string) bool {
 }
 
 func (rl *RateLimiter) blockClient(clientIP string) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 	if state, exists := rl.clients[clientIP]; exists {
 		state.blocked = time.Now()
 	}

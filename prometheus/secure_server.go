@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -121,18 +122,13 @@ func IPFilterMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// getClientIP extracts the real client IP from the request
+// getClientIP extracts the client IP from the request's RemoteAddr.
+// X-Forwarded-For is intentionally ignored; it is client-controlled and
+// cannot be trusted for access-control decisions.
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header (for proxies)
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return xff
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
 	}
-
-	// Check X-Real-IP header (for reverse proxies)
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-
-	// Fall back to RemoteAddr
-	return r.RemoteAddr
+	return host
 }

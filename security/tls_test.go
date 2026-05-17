@@ -99,22 +99,22 @@ func getTLSVersionTests() []struct {
 		expectedMin    uint16
 	}{
 		{
-			name: "TLS 1.0",
+			name: "TLS 1.0 rejected - falls back to 1.2",
 			config: &TLSConfig{
 				Enabled:    true,
 				MinVersion: "1.0",
 			},
 			expectedResult: true,
-			expectedMin:    tls.VersionTLS10,
+			expectedMin:    tls.VersionTLS12,
 		},
 		{
-			name: "TLS 1.1",
+			name: "TLS 1.1 rejected - falls back to 1.2",
 			config: &TLSConfig{
 				Enabled:    true,
 				MinVersion: "1.1",
 			},
 			expectedResult: true,
-			expectedMin:    tls.VersionTLS11,
+			expectedMin:    tls.VersionTLS12,
 		},
 		{
 			name: "TLS 1.2 (default)",
@@ -322,6 +322,8 @@ func runAuthMiddlewareTest(t *testing.T, tt struct {
 }
 
 func TestGetClientIP(t *testing.T) {
+	// getClientIP intentionally ignores X-Forwarded-For / X-Real-IP to prevent
+	// spoofing-based rate-limit and access-control bypasses.
 	tests := []struct {
 		name       string
 		headers    map[string]string
@@ -329,35 +331,41 @@ func TestGetClientIP(t *testing.T) {
 		expected   string
 	}{
 		{
-			name: "X-Forwarded-For header",
+			name: "X-Forwarded-For ignored - uses RemoteAddr",
 			headers: map[string]string{
 				"X-Forwarded-For": "192.168.1.100",
 			},
 			remoteAddr: "10.0.0.1:12345",
-			expected:   "192.168.1.100",
+			expected:   "10.0.0.1",
 		},
 		{
-			name: "X-Real-IP header",
+			name: "X-Real-IP ignored - uses RemoteAddr",
 			headers: map[string]string{
 				"X-Real-IP": "192.168.1.200",
 			},
 			remoteAddr: "10.0.0.1:12345",
-			expected:   "192.168.1.200",
+			expected:   "10.0.0.1",
 		},
 		{
-			name: "Both headers - X-Forwarded-For takes precedence",
+			name: "Both headers ignored - uses RemoteAddr",
 			headers: map[string]string{
 				"X-Forwarded-For": "192.168.1.100",
 				"X-Real-IP":       "192.168.1.200",
 			},
 			remoteAddr: "10.0.0.1:12345",
-			expected:   "192.168.1.100",
+			expected:   "10.0.0.1",
 		},
 		{
-			name:       "Fall back to RemoteAddr",
+			name:       "RemoteAddr with port stripped",
 			headers:    map[string]string{},
 			remoteAddr: "10.0.0.1:12345",
-			expected:   "10.0.0.1:12345",
+			expected:   "10.0.0.1",
+		},
+		{
+			name:       "IPv6 RemoteAddr",
+			headers:    map[string]string{},
+			remoteAddr: "[::1]:12345",
+			expected:   "::1",
 		},
 	}
 

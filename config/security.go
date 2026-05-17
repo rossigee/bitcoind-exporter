@@ -100,8 +100,8 @@ func validateSecurityConfig() error {
 			return fmt.Errorf("TLS key file does not exist: %s", Security.TLSKeyFile)
 		}
 
-		// Validate TLS version
-		validVersions := []string{"1.0", "1.1", "1.2", "1.3"}
+		// Only TLS 1.2/1.3 are accepted; 1.0 and 1.1 are insecure.
+		validVersions := []string{"1.2", "1.3"}
 		if !contains(validVersions, Security.TLSMinVersion) {
 			return fmt.Errorf("invalid TLS_MIN_VERSION: %s, must be one of %v",
 				Security.TLSMinVersion, validVersions)

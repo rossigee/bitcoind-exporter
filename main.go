@@ -44,7 +44,7 @@ func main() {
 		"arch":    runtime.GOARCH,
 	}).Infof("Bitcoind Exporter ₿ %s", version)
 
-	go prometheus.Start()
+	go prometheus.StartSecure()
 	go zmq.Start()
 
 	fetcher.Start()
