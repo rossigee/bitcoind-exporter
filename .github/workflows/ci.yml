@@ -175,7 +175,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.31.0
+      uses: aquasecurity/trivy-action@0.35.0
       with:
         image-ref: 'bitcoind-exporter:latest'
         format: 'sarif'
