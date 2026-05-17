@@ -85,6 +85,35 @@ func InitializeConfig() {
 	if err := LoadSecurityConfig(); err != nil {
 		log.WithError(err).Fatal("Failed to load security configuration")
 	}
+
+	// Build GlobalConfig from the already-parsed legacy struct so that env vars
+	// are only read once and FETCH_INTERVAL (int seconds) keeps its original format.
+	GlobalConfig = &Config{
+		RPC: RPCConfig{
+			Address:    C.RPCAddress,
+			User:       C.RPCUser,
+			Pass:       C.RPCPass,
+			CookieFile: C.RPCCookieFile,
+			Timeout:    30 * time.Second,
+		},
+		ZMQ: ZMQConfig{
+			Enabled:  C.ZmqAddress != "",
+			Address:  C.ZmqAddress,
+			Timeout:  10 * time.Second,
+		},
+		Metrics: MetricsConfig{
+			Port:          C.MetricPort,
+			Path:          "/metrics",
+			FetchInterval: time.Duration(C.FetchInterval) * time.Second,
+		},
+		Security: Security,
+		App: AppConfig{
+			LogLevel:    C.LogLevel,
+			Environment: "production",
+		},
+	}
+
+	healthMonitor = NewConfigHealthMonitor(GlobalConfig, log)
 }
 
 // LoadConfig loads and validates the complete configuration

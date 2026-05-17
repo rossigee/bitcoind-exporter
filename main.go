@@ -3,10 +3,10 @@ package main
 import (
 	"runtime"
 
-	"github.com/Primexz/bitcoind-exporter/config"
-	"github.com/Primexz/bitcoind-exporter/fetcher"
-	"github.com/Primexz/bitcoind-exporter/prometheus"
-	"github.com/Primexz/bitcoind-exporter/zmq"
+	"github.com/rossigee/bitcoind-exporter/config"
+	"github.com/rossigee/bitcoind-exporter/fetcher"
+	"github.com/rossigee/bitcoind-exporter/prometheus"
+	"github.com/rossigee/bitcoind-exporter/zmq"
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
@@ -40,6 +40,7 @@ func main() {
 	setupLogging()
 	log.WithFields(log.Fields{
 		"commit":  commit,
+		"date":    date,
 		"runtime": runtime.Version(),
 		"arch":    runtime.GOARCH,
 	}).Infof("Bitcoind Exporter ₿ %s", version)
@@ -47,5 +48,5 @@ func main() {
 	go prometheus.StartSecure()
 	go zmq.Start()
 
-	fetcher.Start()
+	fetcher.StartResilient()
 }
