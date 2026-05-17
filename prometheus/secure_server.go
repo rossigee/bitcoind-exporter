@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Primexz/bitcoind-exporter/config"
-	"github.com/Primexz/bitcoind-exporter/fetcher"
-	"github.com/Primexz/bitcoind-exporter/security"
+	"github.com/rossigee/bitcoind-exporter/config"
+	"github.com/rossigee/bitcoind-exporter/fetcher"
+	"github.com/rossigee/bitcoind-exporter/security"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )

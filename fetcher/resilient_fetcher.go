@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Primexz/bitcoind-exporter/config"
-	prometheus "github.com/Primexz/bitcoind-exporter/prometheus/metrics"
-	"github.com/Primexz/bitcoind-exporter/util"
+	"github.com/rossigee/bitcoind-exporter/config"
+	prometheus "github.com/rossigee/bitcoind-exporter/prometheus/metrics"
+	"github.com/rossigee/bitcoind-exporter/util"
 	goprom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )

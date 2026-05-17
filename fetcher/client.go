@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Primexz/bitcoind-exporter/config"
-	"github.com/Primexz/bitcoind-exporter/util"
+	"github.com/rossigee/bitcoind-exporter/config"
+	"github.com/rossigee/bitcoind-exporter/util"
 	"github.com/ybbus/jsonrpc/v3"
 )
 

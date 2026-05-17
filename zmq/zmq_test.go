@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Primexz/bitcoind-exporter/config"
+	"github.com/rossigee/bitcoind-exporter/config"
 	"github.com/stretchr/testify/assert"
 )
 

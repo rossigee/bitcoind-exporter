@@ -1,4 +1,4 @@
-module github.com/Primexz/bitcoind-exporter
+module github.com/rossigee/bitcoind-exporter
 
 go 1.26.0
 
