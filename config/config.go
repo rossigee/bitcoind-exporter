@@ -10,6 +10,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Default timeout constants used when constructing GlobalConfig from the legacy struct
+const (
+	defaultRPCTimeout = 30 * time.Second
+	defaultZMQTimeout = 10 * time.Second
+)
+
 // RPCConfig holds RPC connection configuration
 type RPCConfig struct {
 	Address    string        `env:"RPC_ADDRESS,required"`
@@ -94,12 +100,12 @@ func InitializeConfig() {
 			User:       C.RPCUser,
 			Pass:       C.RPCPass,
 			CookieFile: C.RPCCookieFile,
-			Timeout:    30 * time.Second,
+			Timeout:    defaultRPCTimeout,
 		},
 		ZMQ: ZMQConfig{
 			Enabled:  C.ZmqAddress != "",
 			Address:  C.ZmqAddress,
-			Timeout:  10 * time.Second,
+			Timeout:  defaultZMQTimeout,
 		},
 		Metrics: MetricsConfig{
 			Port:          C.MetricPort,

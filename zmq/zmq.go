@@ -9,6 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	zmqMinFrames = 2 // ZMQ multipart minimum: topic + payload
+)
+
 var (
 	log = logrus.WithFields(logrus.Fields{
 		"prefix": "zmq",
@@ -45,7 +49,7 @@ func Start() {
 		}
 
 		// ZMQ multipart: [topic, payload, sequence]. Guard against malformed messages.
-		if len(msg.Frames) < 2 {
+		if len(msg.Frames) < zmqMinFrames {
 			log.WithField("frames", len(msg.Frames)).Warn("Received malformed zmq message, skipping")
 			continue
 		}

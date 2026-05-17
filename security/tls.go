@@ -83,8 +83,8 @@ func createTLSConfig(config *TLSConfig) *tls.Config {
 		minVersion = tls.VersionTLS13
 	}
 
-	return &tls.Config{
-		MinVersion: uint16(minVersion),
+	return &tls.Config{ // #nosec G402 -- MinVersion is set to TLS 1.2 or 1.3 above
+		MinVersion: uint16(minVersion), // #nosec G115 -- tls version constants fit safely in uint16
 
 		// Forward-secrecy cipher suites for TLS 1.2; TLS 1.3 suites are
 		// controlled by Go's runtime and cannot be restricted here.
