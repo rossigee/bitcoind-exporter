@@ -75,7 +75,7 @@ func TestResilientRunner_collectAllMetrics(t *testing.T) {
 	config.C.FetchInterval = 10
 
 	mockClient := NewMockBitcoinRPCClient()
-	
+
 	// Set up minimal successful responses
 	mockClient.SetResponse("getblockchaininfo", &BlockchainInfo{
 		Chain:  "main",
@@ -119,15 +119,15 @@ func TestResilientRunner_processResultsAndUpdateMetrics(t *testing.T) {
 
 	// Create a test results channel
 	results := make(chan result, 3)
-	
+
 	// Add some test results
 	results <- result{
-		name: "blockchain",
+		name: resultNameBlockchain,
 		data: &BlockchainInfo{Blocks: 800000},
 		err:  nil,
 	}
 	results <- result{
-		name: "mempool", 
+		name: resultNameMempool,
 		data: &MempoolInfo{Size: 1000},
 		err:  nil,
 	}
@@ -152,7 +152,7 @@ func TestResilientRunner_processResultsAndUpdateMetrics_TooManyErrors(t *testing
 
 	// Create a test results channel with too many errors
 	results := make(chan result, 10)
-	
+
 	// Add many error results to exceed maxAllowedFailures (6)
 	for i := 0; i < 8; i++ {
 		results <- result{
@@ -212,19 +212,19 @@ func TestResilientRunner_Individual_Fetch_Methods(t *testing.T) {
 
 func TestResilientRunner_getFetchers(t *testing.T) {
 	runner := &ResilientRunner{}
-	
+
 	fetchers := runner.getFetchers()
 
 	// Verify all expected fetchers are present
 	expectedFetchers := []string{
-		"blockchain", "mempool", "memory", "index", "network",
-		"fee_2", "fee_5", "fee_20",
-		"hash_-1", "hash_1", "hash_120",
-		"nettotals",
+		resultNameBlockchain, resultNameMempool, resultNameMemory, resultNameIndex, resultNameNetwork,
+		resultNameFee2, resultNameFee5, resultNameFee20,
+		resultNameHashM1, resultNameHash1, resultNameHash120,
+		resultNameNetTotals,
 	}
 
 	assert.Equal(t, len(expectedFetchers), len(fetchers))
-	
+
 	for _, name := range expectedFetchers {
 		assert.Contains(t, fetchers, name)
 		assert.NotNil(t, fetchers[name])
@@ -237,9 +237,9 @@ func TestResilientRunner_collectResults(t *testing.T) {
 	}
 
 	results := make(chan result, 5)
-	results <- result{name: "blockchain", data: &BlockchainInfo{Blocks: 800000}, err: nil}
-	results <- result{name: "mempool", data: &MempoolInfo{Size: 1000}, err: nil}
-	results <- result{name: "hash_-1", data: 500000000000000.0, err: nil}
+	results <- result{name: resultNameBlockchain, data: &BlockchainInfo{Blocks: 800000}, err: nil}
+	results <- result{name: resultNameMempool, data: &MempoolInfo{Size: 1000}, err: nil}
+	results <- result{name: resultNameHashM1, data: 500000000000000.0, err: nil}
 	results <- result{name: "error1", data: nil, err: assert.AnError}
 	results <- result{name: "error2", data: nil, err: assert.AnError}
 	close(results)

@@ -10,10 +10,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Default timeout constants used when constructing GlobalConfig from the legacy struct
+// Default constants used when constructing GlobalConfig from the legacy struct
 const (
-	defaultRPCTimeout = 30 * time.Second
-	defaultZMQTimeout = 10 * time.Second
+	defaultRPCTimeout  = 30 * time.Second
+	defaultZMQTimeout  = 10 * time.Second
+	defaultMetricsPath = "/metrics"
+	productionEnv      = "production"
 )
 
 // RPCConfig holds RPC connection configuration
@@ -103,19 +105,19 @@ func InitializeConfig() {
 			Timeout:    defaultRPCTimeout,
 		},
 		ZMQ: ZMQConfig{
-			Enabled:  C.ZmqAddress != "",
-			Address:  C.ZmqAddress,
-			Timeout:  defaultZMQTimeout,
+			Enabled: C.ZmqAddress != "",
+			Address: C.ZmqAddress,
+			Timeout: defaultZMQTimeout,
 		},
 		Metrics: MetricsConfig{
 			Port:          C.MetricPort,
-			Path:          "/metrics",
+			Path:          defaultMetricsPath,
 			FetchInterval: time.Duration(C.FetchInterval) * time.Second,
 		},
 		Security: Security,
 		App: AppConfig{
 			LogLevel:    C.LogLevel,
-			Environment: "production",
+			Environment: productionEnv,
 		},
 	}
 
@@ -178,7 +180,7 @@ func LoadConfig() (*Config, error) {
 func ValidateConfig(cfg *Config) error {
 	if validator == nil {
 		// Determine if we should use strict mode
-		strictMode := strings.EqualFold(cfg.App.Environment, "production")
+		strictMode := strings.EqualFold(cfg.App.Environment, productionEnv)
 		validator = NewValidator(strictMode)
 	}
 

@@ -96,9 +96,9 @@ func TestLoadConfiguration_DefaultValues(t *testing.T) {
 	loadConfiguration()
 
 	// Check default values
-	assert.Equal(t, 10, C.FetchInterval) // Default from envDefault tag
-	assert.Equal(t, 3000, C.MetricPort)  // Default from envDefault tag
-	assert.Equal(t, "info", C.LogLevel)  // Default from envDefault tag
+	assert.Equal(t, 10, C.FetchInterval)      // Default from envDefault tag
+	assert.Equal(t, 3000, C.MetricPort)       // Default from envDefault tag
+	assert.Equal(t, logLevelInfo, C.LogLevel) // Default from envDefault tag
 }
 
 func TestConfiguration_Validation(t *testing.T) {
@@ -177,7 +177,6 @@ func runValidationTest(t *testing.T, tt struct {
 		})
 	}
 }
-
 
 // setupTestEnvironment sets up environment variables for testing
 func setupTestEnvironment(rpcUser, rpcPass, cookieFile string) {

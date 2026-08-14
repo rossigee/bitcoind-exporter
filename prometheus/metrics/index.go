@@ -8,11 +8,11 @@ import (
 var (
 	TxIndexSynced = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_txindex_synced",
-		Help: "The number of blocks in the blockchain",
+		Help: helpBlocks,
 	})
 
 	TxIndexBestHeight = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_txindex_best_height",
-		Help: "The number of headers in the blockchain",
+		Help: helpHeaders,
 	})
 )

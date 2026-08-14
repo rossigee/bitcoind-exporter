@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
@@ -173,32 +174,32 @@ func TestAddSecurityHeaders(t *testing.T) {
 			name: "Regular endpoint",
 			path: "/health",
 			expected: map[string]string{
-				"X-Content-Type-Options":   "nosniff",
-				"X-Frame-Options":          "DENY",
-				"X-XSS-Protection":         "1; mode=block",
-				"Referrer-Policy":          "strict-origin-when-cross-origin",
-				"Content-Security-Policy":  "default-src 'self'",
+				"X-Content-Type-Options":  "nosniff",
+				"X-Frame-Options":         "DENY",
+				"X-XSS-Protection":        "1; mode=block",
+				"Referrer-Policy":         "strict-origin-when-cross-origin",
+				"Content-Security-Policy": "default-src 'self'",
 			},
 		},
 		{
 			name: "Metrics endpoint",
 			path: "/metrics",
 			expected: map[string]string{
-				"X-Content-Type-Options":   "nosniff",
-				"X-Frame-Options":          "DENY",
-				"X-XSS-Protection":         "1; mode=block",
-				"Referrer-Policy":          "strict-origin-when-cross-origin",
-				"Content-Security-Policy":  "default-src 'self'",
-				"Cache-Control":            "no-cache, no-store, must-revalidate",
-				"Pragma":                   "no-cache",
-				"Expires":                  "0",
+				"X-Content-Type-Options":  "nosniff",
+				"X-Frame-Options":         "DENY",
+				"X-XSS-Protection":        "1; mode=block",
+				"Referrer-Policy":         "strict-origin-when-cross-origin",
+				"Content-Security-Policy": "default-src 'self'",
+				"Cache-Control":           "no-cache, no-store, must-revalidate",
+				"Pragma":                  "no-cache",
+				"Expires":                 "0",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", tt.path, nil)
+			req := httptest.NewRequestWithContext(context.Background(), "GET", tt.path, nil)
 			rr := httptest.NewRecorder()
 
 			secureHandler.ServeHTTP(rr, req)
@@ -307,7 +308,7 @@ func runAuthMiddlewareTest(t *testing.T, tt struct {
 	middleware := NewAuthMiddleware(tt.username, tt.password)
 	authHandler := middleware.Middleware(handler)
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 	if tt.authHeader != "" {
 		req.Header.Set("Authorization", tt.authHeader)
 	}
@@ -371,7 +372,7 @@ func TestGetClientIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 			req.RemoteAddr = tt.remoteAddr
 			for header, value := range tt.headers {
 				req.Header.Set(header, value)
@@ -423,7 +424,7 @@ func testRateLimitingDisabled(t *testing.T, handler http.Handler) {
 	limiter := NewRateLimiter(config)
 	rateLimitedHandler := limiter.Middleware(handler)
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 	rr := httptest.NewRecorder()
 
 	rateLimitedHandler.ServeHTTP(rr, req)
@@ -443,7 +444,7 @@ func testRateLimitingUnderLimit(t *testing.T, handler http.Handler) {
 
 	// Make 3 requests (under limit of 5)
 	for i := 0; i < 3; i++ {
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 		req.RemoteAddr = "192.168.1.100:12345"
 		rr := httptest.NewRecorder()
 
@@ -467,7 +468,7 @@ func testRateLimitingOverLimit(t *testing.T, handler http.Handler) {
 
 	// Make requests up to the limit
 	for i := 0; i < 2; i++ {
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 		req.RemoteAddr = clientIP
 		rr := httptest.NewRecorder()
 
@@ -477,7 +478,7 @@ func testRateLimitingOverLimit(t *testing.T, handler http.Handler) {
 	}
 
 	// Next request should be rate limited
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 	req.RemoteAddr = clientIP
 	rr := httptest.NewRecorder()
 
@@ -487,7 +488,7 @@ func testRateLimitingOverLimit(t *testing.T, handler http.Handler) {
 	assert.Contains(t, rr.Body.String(), "Rate limit exceeded")
 
 	// Subsequent requests should be blocked
-	req = httptest.NewRequest("GET", "/test", nil)
+	req = httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 	req.RemoteAddr = clientIP
 	rr = httptest.NewRecorder()
 
@@ -525,7 +526,7 @@ func TestCreateSecureHandler(t *testing.T) {
 	assert.NotNil(t, secureHandler)
 
 	// Test with valid auth
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 	req.Header.Set("Authorization", "Basic YWRtaW46c2VjcmV0") // admin:secret
 	rr := httptest.NewRecorder()
 
@@ -537,7 +538,7 @@ func TestCreateSecureHandler(t *testing.T) {
 	assert.Equal(t, "DENY", rr.Header().Get("X-Frame-Options"))
 
 	// Test with invalid auth
-	req = httptest.NewRequest("GET", "/test", nil)
+	req = httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 	rr = httptest.NewRecorder()
 
 	secureHandler.ServeHTTP(rr, req)
@@ -567,7 +568,7 @@ func TestCreateSecureHandler_DisabledFeatures(t *testing.T) {
 
 	assert.NotNil(t, secureHandler)
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 	rr := httptest.NewRecorder()
 
 	secureHandler.ServeHTTP(rr, req)
@@ -645,7 +646,7 @@ func TestAuthMiddleware_EdgeCases(t *testing.T) {
 	authHandler := middleware.Middleware(handler)
 
 	t.Run("Malformed basic auth", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 		req.Header.Set("Authorization", "Basic invalid-base64")
 		rr := httptest.NewRecorder()
 
@@ -660,7 +661,7 @@ func TestAuthMiddleware_EdgeCases(t *testing.T) {
 		authHandler := middleware.Middleware(handler)
 
 		// user:pass:word -> dXNlcjpwYXNzOndvcmQ=
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 		req.Header.Set("Authorization", "Basic dXNlcjpwYXNzOndvcmQ=")
 		rr := httptest.NewRecorder()
 

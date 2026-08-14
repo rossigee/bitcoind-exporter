@@ -14,8 +14,9 @@ import (
 
 // Security configuration constants
 const (
-	minPasswordLength = 8 // Minimum password length
-	ipv4Parts         = 4 // Number of parts in IPv4 address
+	minPasswordLength = 8     // Minimum password length
+	ipv4Parts         = 4     // Number of parts in IPv4 address
+	tlsVersion13      = "1.3" // Minimum supported TLS version
 )
 
 // SecurityConfig holds all security-related configuration
@@ -101,7 +102,7 @@ func validateSecurityConfig() error {
 		}
 
 		// Only TLS 1.2/1.3 are accepted; 1.0 and 1.1 are insecure.
-		validVersions := []string{"1.2", "1.3"}
+		validVersions := []string{"1.2", tlsVersion13}
 		if !contains(validVersions, Security.TLSMinVersion) {
 			return fmt.Errorf("invalid TLS_MIN_VERSION: %s, must be one of %v",
 				Security.TLSMinVersion, validVersions)
@@ -286,12 +287,12 @@ func matchesIP(clientIP, pattern string) bool {
 		if err != nil {
 			return false
 		}
-		
+
 		ip := net.ParseIP(clientIP)
 		if ip == nil {
 			return false
 		}
-		
+
 		return cidr.Contains(ip)
 	}
 

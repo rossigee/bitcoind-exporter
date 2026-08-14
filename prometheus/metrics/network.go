@@ -8,17 +8,17 @@ import (
 var (
 	TotalConnections = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_total_connections",
-		Help: "The number of blocks in the blockchain",
+		Help: helpBlocks,
 	})
 
 	ConnectionsIn = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_connections_in",
-		Help: "The number of headers in the blockchain",
+		Help: helpHeaders,
 	})
 
 	ConnectionsOut = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_connections_out",
-		Help: "The number of headers in the blockchain",
+		Help: helpHeaders,
 	})
 
 	TotalBytesRecv = promauto.NewGauge(prometheus.GaugeOpts{

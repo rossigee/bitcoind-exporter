@@ -93,24 +93,24 @@ func getInitializeChecksTestCases() []struct {
 		{
 			name:           "minimal configuration",
 			config:         createMinimalHealthConfig(),
-			expectedChecks: []string{"rpc_connectivity", "port_availability", "config_validation"},
+			expectedChecks: []string{checkNameRPCConnectivity, checkNamePortAvailability, checkNameConfigValidation},
 		},
 		{
 			name:           "configuration with ZMQ enabled",
 			config:         createZMQHealthConfig(),
-			expectedChecks: []string{"rpc_connectivity", "zmq_connectivity", "port_availability", "config_validation"},
+			expectedChecks: []string{checkNameRPCConnectivity, checkNameZMQConnectivity, checkNamePortAvailability, checkNameConfigValidation},
 		},
 		{
 			name:           "configuration with TLS enabled",
 			config:         createTLSHealthConfig(),
-			expectedChecks: []string{"rpc_connectivity", "tls_certificate", "port_availability", "config_validation"},
+			expectedChecks: []string{checkNameRPCConnectivity, checkNameTLSCertificate, checkNamePortAvailability, checkNameConfigValidation},
 		},
 		{
-			name:           "full configuration",
-			config:         createFullHealthConfig(),
+			name:   "full configuration",
+			config: createFullHealthConfig(),
 			expectedChecks: []string{
-				"rpc_connectivity", "zmq_connectivity", "tls_certificate", 
-				"port_availability", "config_validation",
+				checkNameRPCConnectivity, checkNameZMQConnectivity, checkNameTLSCertificate,
+				checkNamePortAvailability, checkNameConfigValidation,
 			},
 		},
 	}
@@ -176,7 +176,7 @@ func runInitializeChecksTest(t *testing.T, config *Config, expectedChecks []stri
 	t.Helper()
 	logger := logrus.WithField("test", true)
 	monitor := NewConfigHealthMonitor(config, logger)
-	
+
 	// Call initializeChecks to populate the checks map
 	monitor.initializeChecks()
 
@@ -206,23 +206,23 @@ func TestConfigHealthMonitor_GetHealthStatus(t *testing.T) {
 	monitor.initializeChecks()
 
 	// Update a check status
-	monitor.checks["rpc_connectivity"].Status = StatusHealthy
-	monitor.checks["rpc_connectivity"].Message = "Test message"
-	monitor.checks["rpc_connectivity"].LastChecked = time.Now()
+	monitor.checks[checkNameRPCConnectivity].Status = StatusHealthy
+	monitor.checks[checkNameRPCConnectivity].Message = "Test message"
+	monitor.checks[checkNameRPCConnectivity].LastChecked = time.Now()
 
 	status := monitor.GetHealthStatus()
 
 	assert.NotNil(t, status)
-	assert.Contains(t, status, "rpc_connectivity")
-	
-	rpcCheck := status["rpc_connectivity"]
+	assert.Contains(t, status, checkNameRPCConnectivity)
+
+	rpcCheck := status[checkNameRPCConnectivity]
 	assert.Equal(t, StatusHealthy, rpcCheck.Status)
 	assert.Equal(t, "Test message", rpcCheck.Message)
 	assert.False(t, rpcCheck.LastChecked.IsZero())
 
 	// Ensure we got a copy (modifying returned status shouldn't affect original)
-	status["rpc_connectivity"].Status = StatusUnhealthy
-	assert.Equal(t, StatusHealthy, monitor.checks["rpc_connectivity"].Status)
+	status[checkNameRPCConnectivity].Status = StatusUnhealthy
+	assert.Equal(t, StatusHealthy, monitor.checks[checkNameRPCConnectivity].Status)
 }
 
 func TestConfigHealthMonitor_IsHealthy(t *testing.T) {
@@ -279,10 +279,10 @@ func TestConfigHealthMonitor_GetHealthSummary(t *testing.T) {
 
 	// Update some check statuses
 	now := time.Now()
-	monitor.checks["rpc_connectivity"].Status = StatusHealthy
-	monitor.checks["rpc_connectivity"].Message = "RPC is working"
-	monitor.checks["rpc_connectivity"].LastChecked = now
-	monitor.checks["rpc_connectivity"].Duration = 50 * time.Millisecond
+	monitor.checks[checkNameRPCConnectivity].Status = StatusHealthy
+	monitor.checks[checkNameRPCConnectivity].Message = "RPC is working"
+	monitor.checks[checkNameRPCConnectivity].LastChecked = now
+	monitor.checks[checkNameRPCConnectivity].Duration = 50 * time.Millisecond
 
 	summary := monitor.GetHealthSummary()
 
@@ -292,9 +292,9 @@ func TestConfigHealthMonitor_GetHealthSummary(t *testing.T) {
 	assert.Contains(t, summary, "checks")
 
 	checks := summary["checks"].(map[string]interface{})
-	assert.Contains(t, checks, "rpc_connectivity")
+	assert.Contains(t, checks, checkNameRPCConnectivity)
 
-	rpcCheck := checks["rpc_connectivity"].(map[string]interface{})
+	rpcCheck := checks[checkNameRPCConnectivity].(map[string]interface{})
 	assert.Equal(t, "healthy", rpcCheck["status"])
 	assert.Equal(t, "RPC is working", rpcCheck["message"])
 	assert.Equal(t, int64(50), rpcCheck["duration_ms"])
@@ -305,11 +305,11 @@ func TestHealthStatus_String(t *testing.T) {
 		status   HealthStatus
 		expected string
 	}{
-		{StatusUnknown, "unknown"},
+		{StatusUnknown, statusUnknown},
 		{StatusHealthy, "healthy"},
 		{StatusUnhealthy, "unhealthy"},
 		{StatusDegraded, "degraded"},
-		{HealthStatus(999), "unknown"}, // Invalid status
+		{HealthStatus(999), statusUnknown}, // Invalid status
 	}
 
 	for _, tt := range tests {
@@ -431,9 +431,9 @@ func getTLSCertificateTestCases() []struct {
 			expectedStatus: StatusHealthy,
 		},
 		{
-			name:       "TLS enabled with valid certificates",
-			tlsEnabled: true,
-			setupFiles: createTLSTestFiles,
+			name:           "TLS enabled with valid certificates",
+			tlsEnabled:     true,
+			setupFiles:     createTLSTestFiles,
 			expectedStatus: StatusHealthy,
 		},
 		{
@@ -553,12 +553,12 @@ func createValidDevConfig() *Config {
 		},
 		Metrics: MetricsConfig{
 			Port:          3000,
-			Path:          "/metrics",
+			Path:          defaultMetricsPath,
 			FetchInterval: 10 * time.Second,
 		},
 		App: AppConfig{
-			LogLevel:    "info",
-			Environment: "development", // Not production, so no security warnings
+			LogLevel:    logLevelInfo,
+			Environment: envDevelopment, // Not production, so no security warnings
 		},
 		Security: SecurityConfig{}, // Minimal security in dev mode
 	}
@@ -596,13 +596,13 @@ func TestValidateCertificateFile(t *testing.T) {
 
 func runCertFileValidationTests(t *testing.T) {
 	t.Helper()
-	runFileValidationTest(t, "empty cert file path", "", "invalid certificate file path", 
+	runFileValidationTest(t, "empty cert file path", "", "invalid certificate file path",
 		nil, validateCertificateFile)
-	runFileValidationTest(t, "cert file with path traversal", "../../../etc/passwd", 
+	runFileValidationTest(t, "cert file with path traversal", "../../../etc/passwd",
 		"invalid certificate file path", nil, validateCertificateFile)
-	runFileValidationTest(t, "non-existent cert file", "/nonexistent/cert.pem", 
+	runFileValidationTest(t, "non-existent cert file", "/nonexistent/cert.pem",
 		"certificate file not accessible", nil, validateCertificateFile)
-	
+
 	runFileValidationTest(t, "valid certificate file", "", "", func(t *testing.T) (string, func()) {
 		certFile, _ := createTestCertificates(t)
 		cleanup := func() {
@@ -618,13 +618,13 @@ func TestValidateKeyFile(t *testing.T) {
 
 func runKeyFileValidationTests(t *testing.T) {
 	t.Helper()
-	runFileValidationTest(t, "empty key file path", "", "invalid key file path", 
+	runFileValidationTest(t, "empty key file path", "", "invalid key file path",
 		nil, validateKeyFile)
-	runFileValidationTest(t, "key file with path traversal", "../../../etc/passwd", 
+	runFileValidationTest(t, "key file with path traversal", "../../../etc/passwd",
 		"invalid key file path", nil, validateKeyFile)
-	runFileValidationTest(t, "non-existent key file", "/nonexistent/key.pem", 
+	runFileValidationTest(t, "non-existent key file", "/nonexistent/key.pem",
 		"key file not accessible", nil, validateKeyFile)
-	
+
 	runFileValidationTest(t, "valid key file", "", "", func(t *testing.T) (string, func()) {
 		_, keyFile := createTestCertificates(t)
 		cleanup := func() {

@@ -5,15 +5,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+const (
+	helpBlocks  = "The number of blocks in the blockchain"
+	helpHeaders = "The number of headers in the blockchain"
+)
+
 var (
 	BlockchainBlocks = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_blockchain_blocks",
-		Help: "The number of blocks in the blockchain",
+		Help: helpBlocks,
 	})
 
 	BlockchainHeaders = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_blockchain_headers",
-		Help: "The number of headers in the blockchain",
+		Help: helpHeaders,
 	})
 
 	BlockchainVerificationProgress = promauto.NewGauge(prometheus.GaugeOpts{

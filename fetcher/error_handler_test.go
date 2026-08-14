@@ -425,7 +425,7 @@ func TestCircuitBreaker_HalfOpen_Success(t *testing.T) {
 	cb := NewCircuitBreaker(1, time.Millisecond*10)
 
 	// Trigger circuit to open
-	err := cb.Call(func() error { return errors.New("error") })
+	err := cb.Call(func() error { return errors.New(logFieldError) })
 	assert.Error(t, err)
 	assert.Equal(t, CircuitOpen, cb.GetState())
 
@@ -443,7 +443,7 @@ func TestCircuitBreaker_HalfOpen_Failure(t *testing.T) {
 	cb := NewCircuitBreaker(1, time.Millisecond*10)
 
 	// Trigger circuit to open
-	err := cb.Call(func() error { return errors.New("error") })
+	err := cb.Call(func() error { return errors.New(logFieldError) })
 	assert.Error(t, err)
 	assert.Equal(t, CircuitOpen, cb.GetState())
 
@@ -451,7 +451,7 @@ func TestCircuitBreaker_HalfOpen_Failure(t *testing.T) {
 	time.Sleep(time.Millisecond * 15)
 
 	// Next call should be allowed (half-open) but fail
-	err = cb.Call(func() error { return errors.New("error") })
+	err = cb.Call(func() error { return errors.New(logFieldError) })
 	assert.Error(t, err)
 	assert.Equal(t, CircuitOpen, cb.GetState())
 }

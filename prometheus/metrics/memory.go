@@ -8,12 +8,12 @@ import (
 var (
 	MemoryUsed = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_memory_used",
-		Help: "The number of blocks in the blockchain",
+		Help: helpBlocks,
 	})
 
 	MemoryFree = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_memory_free",
-		Help: "The number of headers in the blockchain",
+		Help: helpHeaders,
 	})
 
 	MemoryTotal = promauto.NewGauge(prometheus.GaugeOpts{

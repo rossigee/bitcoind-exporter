@@ -346,7 +346,7 @@ func getMetricsValidationTestCases() []struct {
 			name: "valid metrics config",
 			config: MetricsConfig{
 				Port:          3000,
-				Path:          "/metrics",
+				Path:          defaultMetricsPath,
 				FetchInterval: 10 * time.Second,
 			},
 			wantValid: true,
@@ -355,7 +355,7 @@ func getMetricsValidationTestCases() []struct {
 			name: "invalid port too low",
 			config: MetricsConfig{
 				Port:          0,
-				Path:          "/metrics",
+				Path:          defaultMetricsPath,
 				FetchInterval: 10 * time.Second,
 			},
 			wantValid: false,
@@ -365,7 +365,7 @@ func getMetricsValidationTestCases() []struct {
 			name: "invalid port too high",
 			config: MetricsConfig{
 				Port:          70000,
-				Path:          "/metrics",
+				Path:          defaultMetricsPath,
 				FetchInterval: 10 * time.Second,
 			},
 			wantValid: false,
@@ -385,7 +385,7 @@ func getMetricsValidationTestCases() []struct {
 			name: "fetch interval too short",
 			config: MetricsConfig{
 				Port:          3000,
-				Path:          "/metrics",
+				Path:          defaultMetricsPath,
 				FetchInterval: 500 * time.Millisecond,
 			},
 			wantValid: false,
@@ -555,8 +555,8 @@ func TestValidator_ValidateAppConfig(t *testing.T) {
 		{
 			name: "valid app config",
 			config: AppConfig{
-				LogLevel:    "info",
-				Environment: "production",
+				LogLevel:    logLevelInfo,
+				Environment: productionEnv,
 			},
 			wantValid: true,
 		},
@@ -564,7 +564,7 @@ func TestValidator_ValidateAppConfig(t *testing.T) {
 			name: "invalid log level",
 			config: AppConfig{
 				LogLevel:    "invalid",
-				Environment: "production",
+				Environment: productionEnv,
 			},
 			wantValid: false,
 			wantError: "log level must be one of:",
@@ -573,7 +573,7 @@ func TestValidator_ValidateAppConfig(t *testing.T) {
 			name: "valid debug level",
 			config: AppConfig{
 				LogLevel:    "debug",
-				Environment: "development",
+				Environment: envDevelopment,
 			},
 			wantValid: true,
 		},
@@ -657,7 +657,7 @@ func getValidCompleteConfigTestCases() []struct {
 				},
 				Metrics: MetricsConfig{
 					Port:          3000,
-					Path:          "/metrics",
+					Path:          defaultMetricsPath,
 					FetchInterval: 10 * time.Second,
 				},
 				Security: SecurityConfig{
@@ -669,8 +669,8 @@ func getValidCompleteConfigTestCases() []struct {
 					AuthPassword: "password123",
 				},
 				App: AppConfig{
-					LogLevel:    "info",
-					Environment: "production",
+					LogLevel:    logLevelInfo,
+					Environment: productionEnv,
 				},
 			},
 			strict:    true,
@@ -705,15 +705,15 @@ func getInvalidCompleteConfigTestCases() []struct {
 				},
 				Metrics: MetricsConfig{
 					Port:          3000,
-					Path:          "/metrics",
+					Path:          defaultMetricsPath,
 					FetchInterval: 10 * time.Second,
 				},
 				Security: SecurityConfig{
 					TLSEnabled: false,
 				},
 				App: AppConfig{
-					LogLevel:    "info",
-					Environment: "production",
+					LogLevel:    logLevelInfo,
+					Environment: productionEnv,
 				},
 			},
 			strict:    true,
@@ -824,7 +824,7 @@ func getMatchesIPTestCases() []struct {
 	cidrTests := getCIDRMatchTests()
 	ipv6Tests := getIPv6MatchTests()
 	edgeTests := getIPMatchEdgeTests()
-	
+
 	return append(append(append(basicTests, cidrTests...), ipv6Tests...), edgeTests...)
 }
 

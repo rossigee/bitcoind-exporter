@@ -26,17 +26,17 @@ func getLoadSecurityConfigTestCases() []struct {
 } {
 	validTests := getValidLoadSecurityConfigCases()
 	invalidTests := getInvalidLoadSecurityConfigCases()
-	
+
 	allTests := make([]struct {
 		name     string
 		envVars  map[string]string
 		wantErr  bool
 		validate func(t *testing.T, cfg SecurityConfig)
 	}, 0, len(validTests)+len(invalidTests))
-	
+
 	allTests = append(allTests, validTests...)
 	allTests = append(allTests, invalidTests...)
-	
+
 	return allTests
 }
 
@@ -71,7 +71,7 @@ func getValidLoadSecurityConfigCases() []struct {
 			validate: validateAuthConfig,
 		},
 		{
-			name:     "rate limiting configuration", 
+			name:     "rate limiting configuration",
 			envVars:  getRateLimitConfigEnvVars(),
 			wantErr:  false,
 			validate: validateRateLimitConfig,
@@ -136,7 +136,7 @@ func getTLSConfigEnvVars() map[string]string {
 		"TLS_ENABLED":     "true",
 		"TLS_CERT_FILE":   "/tmp/test-cert.pem",
 		"TLS_KEY_FILE":    "/tmp/test-key.pem",
-		"TLS_MIN_VERSION": "1.3",
+		"TLS_MIN_VERSION": tlsVersion13,
 	}
 }
 
@@ -145,7 +145,7 @@ func validateTLSConfig(t *testing.T, cfg SecurityConfig) {
 	assert.True(t, cfg.TLSEnabled)
 	assert.NotEmpty(t, cfg.TLSCertFile)
 	assert.NotEmpty(t, cfg.TLSKeyFile)
-	assert.Equal(t, "1.3", cfg.TLSMinVersion)
+	assert.Equal(t, tlsVersion13, cfg.TLSMinVersion)
 }
 
 func getAuthConfigEnvVars() map[string]string {
@@ -303,7 +303,7 @@ func getIsIPAllowedTestCases() []struct {
 	basicTests := getBasicIPAllowedTestCases()
 	cidrTests := getCIDRIPAllowedTestCases()
 	specialTests := getSpecialIPAllowedTestCases()
-	
+
 	allTests := make([]struct {
 		name       string
 		allowedIPs []string
@@ -311,11 +311,11 @@ func getIsIPAllowedTestCases() []struct {
 		clientIP   string
 		expected   bool
 	}, 0, len(basicTests)+len(cidrTests)+len(specialTests))
-	
+
 	allTests = append(allTests, basicTests...)
 	allTests = append(allTests, cidrTests...)
 	allTests = append(allTests, specialTests...)
-	
+
 	return allTests
 }
 
@@ -456,7 +456,6 @@ func runIsIPAllowedTest(t *testing.T, tt struct {
 	assert.Equal(t, tt.expected, result)
 }
 
-
 func TestIsValidIP(t *testing.T) {
 	tests := []struct {
 		ip       string
@@ -528,19 +527,19 @@ func getValidateSecurityConfigTestCases() []struct {
 	tlsErrorTests := getTLSErrorTestCases()
 	authErrorTests := getAuthErrorTestCases()
 	otherErrorTests := getOtherSecurityErrorTestCases()
-	
+
 	allTests := make([]struct {
 		name        string
 		setupConfig func()
 		expectedErr string
 		setupFiles  func(t *testing.T) func()
 	}, 0, len(validTests)+len(tlsErrorTests)+len(authErrorTests)+len(otherErrorTests))
-	
+
 	allTests = append(allTests, validTests...)
 	allTests = append(allTests, tlsErrorTests...)
 	allTests = append(allTests, authErrorTests...)
 	allTests = append(allTests, otherErrorTests...)
-	
+
 	return allTests
 }
 
@@ -790,15 +789,15 @@ func runValidateSecurityConfigTest(t *testing.T, tt struct {
 func setupSecurityTestEnvironment(_ *testing.T, envVars map[string]string) []string {
 	// Save current environment
 	oldEnv := os.Environ()
-	
+
 	// Clear environment
 	os.Clearenv()
-	
+
 	// Set test environment variables
 	for key, value := range envVars {
 		_ = os.Setenv(key, value)
 	}
-	
+
 	return oldEnv
 }
 
@@ -806,7 +805,7 @@ func TestLogSecurityConfig(t *testing.T) {
 	// Set up a configuration
 	Security = SecurityConfig{
 		TLSEnabled:        true,
-		TLSMinVersion:     "1.3",
+		TLSMinVersion:     tlsVersion13,
 		AuthEnabled:       true,
 		AuthUsername:      "admin",
 		RateLimitEnabled:  true,

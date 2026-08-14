@@ -24,6 +24,14 @@ const (
 	healthCheckTimeout         = 10 * time.Second // Individual check timeout
 	httpClientTimeout          = 5 * time.Second  // HTTP client timeout
 	tcpDialTimeout             = 5 * time.Second  // TCP dial timeout
+
+	statusUnknown = "unknown"
+
+	checkNameRPCConnectivity  = "rpc_connectivity"
+	checkNameZMQConnectivity  = "zmq_connectivity"
+	checkNameTLSCertificate   = "tls_certificate"
+	checkNamePortAvailability = "port_availability"
+	checkNameConfigValidation = "config_validation"
 )
 
 // HealthStatus represents the health status of a configuration component
@@ -39,7 +47,7 @@ const (
 func (s HealthStatus) String() string {
 	switch s {
 	case StatusUnknown:
-		return "unknown"
+		return statusUnknown
 	case StatusHealthy:
 		return "healthy"
 	case StatusUnhealthy:
@@ -47,7 +55,7 @@ func (s HealthStatus) String() string {
 	case StatusDegraded:
 		return "degraded"
 	default:
-		return "unknown"
+		return statusUnknown
 	}
 }
 
@@ -150,14 +158,14 @@ func (m *ConfigHealthMonitor) IsHealthy() bool {
 // initializeChecks sets up health checks based on configuration
 func (m *ConfigHealthMonitor) initializeChecks() {
 	// RPC connectivity check
-	m.checks["rpc_connectivity"] = &HealthCheck{
+	m.checks[checkNameRPCConnectivity] = &HealthCheck{
 		Name:   "RPC Connectivity",
 		Status: StatusUnknown,
 	}
 
 	// ZMQ connectivity check (if enabled)
 	if m.config.ZMQ.Enabled {
-		m.checks["zmq_connectivity"] = &HealthCheck{
+		m.checks[checkNameZMQConnectivity] = &HealthCheck{
 			Name:   "ZMQ Connectivity",
 			Status: StatusUnknown,
 		}
@@ -165,20 +173,20 @@ func (m *ConfigHealthMonitor) initializeChecks() {
 
 	// TLS certificate check (if enabled)
 	if m.config.Security.TLSEnabled {
-		m.checks["tls_certificate"] = &HealthCheck{
+		m.checks[checkNameTLSCertificate] = &HealthCheck{
 			Name:   "TLS Certificate",
 			Status: StatusUnknown,
 		}
 	}
 
 	// Port availability check
-	m.checks["port_availability"] = &HealthCheck{
+	m.checks[checkNamePortAvailability] = &HealthCheck{
 		Name:   "Port Availability",
 		Status: StatusUnknown,
 	}
 
 	// Configuration validation check
-	m.checks["config_validation"] = &HealthCheck{
+	m.checks[checkNameConfigValidation] = &HealthCheck{
 		Name:   "Configuration Validation",
 		Status: StatusUnknown,
 	}
@@ -243,15 +251,15 @@ func (m *ConfigHealthMonitor) runSingleCheck(ctx context.Context, checkName stri
 	defer cancel()
 
 	switch checkName {
-	case "rpc_connectivity":
+	case checkNameRPCConnectivity:
 		status, message, err = m.checkRPCConnectivity(checkCtx)
-	case "zmq_connectivity":
+	case checkNameZMQConnectivity:
 		status, message, err = m.checkZMQConnectivity(checkCtx)
-	case "tls_certificate":
+	case checkNameTLSCertificate:
 		status, message, err = m.checkTLSCertificate(checkCtx)
-	case "port_availability":
+	case checkNamePortAvailability:
 		status, message, err = m.checkPortAvailability(checkCtx)
-	case "config_validation":
+	case checkNameConfigValidation:
 		status, message, err = m.checkConfigValidation(checkCtx)
 	default:
 		status = StatusUnknown
@@ -556,7 +564,7 @@ func validateCertKeyPair(certFile, keyFile string) error {
 		if !ok {
 			return fmt.Errorf("certificate has ECDSA public key but private key is not ECDSA")
 		}
-		if pub.X.Cmp(priv.X) != 0 || pub.Y.Cmp(priv.Y) != 0 {
+		if !pub.Equal(&priv.PublicKey) {
 			return fmt.Errorf("ECDSA private key does not match certificate public key")
 		}
 	default:

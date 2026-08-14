@@ -15,6 +15,9 @@ const (
 	minZMQAddressParts = 3     // Minimum parts in ZMQ address
 	maxRateLimit       = 10000 // Maximum rate limit warning threshold
 	maxCIDRParts       = 2     // Expected parts in CIDR notation
+
+	logLevelInfo   = "info"
+	envDevelopment = "development"
 )
 
 // ValidationError represents a configuration validation error
@@ -293,7 +296,7 @@ func (v *Validator) validateSecurityConfig(security *SecurityConfig, result *Val
 // validateAppConfig validates application-level configuration
 func (v *Validator) validateAppConfig(app *AppConfig, result *ValidationResult) {
 	// Validate log level
-	validLogLevels := []string{"trace", "debug", "info", "warn", "error", "fatal", "panic"}
+	validLogLevels := []string{"trace", "debug", logLevelInfo, "warn", "error", "fatal", "panic"}
 	isValidLevel := false
 	for _, level := range validLogLevels {
 		if strings.EqualFold(app.LogLevel, level) {
@@ -314,7 +317,7 @@ func (v *Validator) validateAppConfig(app *AppConfig, result *ValidationResult) 
 
 	// Validate environment
 	if app.Environment != "" {
-		validEnvs := []string{"development", "staging", "production"}
+		validEnvs := []string{envDevelopment, "staging", productionEnv}
 		isValidEnv := false
 		for _, env := range validEnvs {
 			if strings.EqualFold(app.Environment, env) {
@@ -364,7 +367,7 @@ func (v *Validator) validateCrossFieldDependencies(cfg *Config, result *Validati
 	}
 
 	// Production readiness checks
-	if v.strictMode && strings.EqualFold(cfg.App.Environment, "production") {
+	if v.strictMode && strings.EqualFold(cfg.App.Environment, productionEnv) {
 		if !cfg.Security.TLSEnabled {
 			result.AddError("PRODUCTION_TLS", "false",
 				"TLS must be enabled in production environment")
@@ -434,7 +437,7 @@ func (v *Validator) ValidateAndReport(cfg *Config) (valid bool, output string, e
 	if len(result.Warnings) > 0 {
 		report.WriteString("\nWarnings:\n")
 		for _, warning := range result.Warnings {
-			report.WriteString(fmt.Sprintf("  - %s\n", warning))
+			fmt.Fprintf(&report, "  - %s\n", warning)
 		}
 	}
 

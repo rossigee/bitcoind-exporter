@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	goprom "github.com/prometheus/client_golang/prometheus"
 	"github.com/rossigee/bitcoind-exporter/config"
 	prometheus "github.com/rossigee/bitcoind-exporter/prometheus/metrics"
-	goprom "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/rossigee/bitcoind-exporter/util"
 	"github.com/sirupsen/logrus"
@@ -120,14 +120,14 @@ func (r *Runner) updateMetrics(blockChainInfo *BlockchainInfo, memPoolInfo *Memp
 	prometheus.TotalBytesSent.Set(float64(netTotals.TotalBytesSent))
 
 	// SmartFee
-	prometheus.SmartFee.With(goprom.Labels{"blocks": "2"}).Set(util.ConvertBTCkBToSatVb(feeRate2.Feerate))
-	prometheus.SmartFee.With(goprom.Labels{"blocks": "5"}).Set(util.ConvertBTCkBToSatVb(feeRate5.Feerate))
-	prometheus.SmartFee.With(goprom.Labels{"blocks": "20"}).Set(util.ConvertBTCkBToSatVb(feeRate20.Feerate))
+	prometheus.SmartFee.With(goprom.Labels{blocksLabel: "2"}).Set(util.ConvertBTCkBToSatVb(feeRate2.Feerate))
+	prometheus.SmartFee.With(goprom.Labels{blocksLabel: "5"}).Set(util.ConvertBTCkBToSatVb(feeRate5.Feerate))
+	prometheus.SmartFee.With(goprom.Labels{blocksLabel: "20"}).Set(util.ConvertBTCkBToSatVb(feeRate20.Feerate))
 
 	// Mining
-	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "-1"}).Set(hasRateLatest)
-	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "1"}).Set(hashRate1)
-	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "120"}).Set(hashRate120)
+	prometheus.MiningHashrate.With(goprom.Labels{blocksLabel: "-1"}).Set(hasRateLatest)
+	prometheus.MiningHashrate.With(goprom.Labels{blocksLabel: "1"}).Set(hashRate1)
+	prometheus.MiningHashrate.With(goprom.Labels{blocksLabel: "120"}).Set(hashRate120)
 }
 
 func (r *Runner) getBlockchainInfo(ctx context.Context) *BlockchainInfo {

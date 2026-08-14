@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	goprom "github.com/prometheus/client_golang/prometheus"
 	"github.com/rossigee/bitcoind-exporter/config"
 	prometheus "github.com/rossigee/bitcoind-exporter/prometheus/metrics"
 	"github.com/rossigee/bitcoind-exporter/util"
-	goprom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,6 +19,21 @@ const (
 	circuitBreakerResetTime   = time.Minute * 2 // Circuit breaker reset timeout
 	totalRPCCallChannelSize   = 11              // Total number of RPC calls
 	maxAllowedFailures        = 6               // Maximum allowed failures before error
+
+	blocksLabel = "blocks"
+
+	resultNameBlockchain = "blockchain"
+	resultNameMempool    = "mempool"
+	resultNameMemory     = "memory"
+	resultNameIndex      = "index"
+	resultNameNetwork    = "network"
+	resultNameNetTotals  = "nettotals"
+	resultNameFee2       = "fee_2"
+	resultNameFee5       = "fee_5"
+	resultNameFee20      = "fee_20"
+	resultNameHashM1     = "hash_-1"
+	resultNameHash1      = "hash_1"
+	resultNameHash120    = "hash_120"
 )
 
 // result represents the result of a metric fetch operation
@@ -43,7 +58,7 @@ func NewResilientRunner() *ResilientRunner {
 		errorHandler:   NewErrorHandler(),
 		circuitBreaker: NewCircuitBreaker(circuitBreakerMaxFailures, circuitBreakerResetTime),
 		logger: logrus.WithFields(logrus.Fields{
-			"component": "resilient_fetcher",
+			logFieldComponent: "resilient_fetcher",
 		}),
 	}
 }
@@ -122,30 +137,30 @@ func (r *ResilientRunner) executeConcurrentFetching(ctx context.Context) <-chan 
 // getFetchers returns the map of all metric fetchers
 func (r *ResilientRunner) getFetchers() map[string]func(context.Context) (interface{}, error) {
 	return map[string]func(context.Context) (interface{}, error){
-		"blockchain": r.fetchBlockchainInfoWithRetry,
-		"mempool":    r.fetchMempoolInfoWithRetry,
-		"memory":     r.fetchMemoryInfoWithRetry,
-		"index":      r.fetchIndexInfoWithRetry,
-		"network":    r.fetchNetworkInfoWithRetry,
-		"fee_2": func(ctx context.Context) (interface{}, error) {
+		resultNameBlockchain: r.fetchBlockchainInfoWithRetry,
+		resultNameMempool:    r.fetchMempoolInfoWithRetry,
+		resultNameMemory:     r.fetchMemoryInfoWithRetry,
+		resultNameIndex:      r.fetchIndexInfoWithRetry,
+		resultNameNetwork:    r.fetchNetworkInfoWithRetry,
+		resultNameFee2: func(ctx context.Context) (interface{}, error) {
 			return r.fetchSmartFeeWithRetry(ctx, feeEstimation2Blocks)
 		},
-		"fee_5": func(ctx context.Context) (interface{}, error) {
+		resultNameFee5: func(ctx context.Context) (interface{}, error) {
 			return r.fetchSmartFeeWithRetry(ctx, feeEstimation5Blocks)
 		},
-		"fee_20": func(ctx context.Context) (interface{}, error) {
+		resultNameFee20: func(ctx context.Context) (interface{}, error) {
 			return r.fetchSmartFeeWithRetry(ctx, feeEstimation20Blocks)
 		},
-		"hash_-1": func(ctx context.Context) (interface{}, error) {
+		resultNameHashM1: func(ctx context.Context) (interface{}, error) {
 			return r.fetchNetworkHashrateWithRetry(ctx, hashRateLatest)
 		},
-		"hash_1": func(ctx context.Context) (interface{}, error) {
+		resultNameHash1: func(ctx context.Context) (interface{}, error) {
 			return r.fetchNetworkHashrateWithRetry(ctx, hashRate1Block)
 		},
-		"hash_120": func(ctx context.Context) (interface{}, error) {
+		resultNameHash120: func(ctx context.Context) (interface{}, error) {
 			return r.fetchNetworkHashrateWithRetry(ctx, hashRate120Blocks)
 		},
-		"nettotals": r.fetchNetTotalsWithRetry,
+		resultNameNetTotals: r.fetchNetTotalsWithRetry,
 	}
 }
 
@@ -195,29 +210,29 @@ func (r *ResilientRunner) collectResults(results <-chan result, data *metricData
 		}
 
 		switch res.name {
-		case "blockchain":
+		case resultNameBlockchain:
 			data.blockchainInfo = res.data.(*BlockchainInfo)
-		case "mempool":
+		case resultNameMempool:
 			data.mempoolInfo = res.data.(*MempoolInfo)
-		case "memory":
+		case resultNameMemory:
 			data.memoryInfo = res.data.(*MemoryInfo)
-		case "index":
+		case resultNameIndex:
 			data.indexInfo = res.data.(*IndexInfo)
-		case "network":
+		case resultNameNetwork:
 			data.networkInfo = res.data.(*NetworkInfo)
-		case "nettotals":
+		case resultNameNetTotals:
 			data.netTotals = res.data.(*NetTotals)
-		case "fee_2":
+		case resultNameFee2:
 			data.feeRate2 = res.data.(*SmartFee)
-		case "fee_5":
+		case resultNameFee5:
 			data.feeRate5 = res.data.(*SmartFee)
-		case "fee_20":
+		case resultNameFee20:
 			data.feeRate20 = res.data.(*SmartFee)
-		case "hash_-1":
+		case resultNameHashM1:
 			data.hashRateLatest = res.data.(float64)
-		case "hash_1":
+		case resultNameHash1:
 			data.hashRate1 = res.data.(float64)
-		case "hash_120":
+		case resultNameHash120:
 			data.hashRate120 = res.data.(float64)
 		}
 	}
@@ -438,17 +453,17 @@ func (r *ResilientRunner) updateMetrics(blockchainInfo *BlockchainInfo, mempoolI
 
 	// Update fee metrics if available
 	if feeRate2 != nil {
-		prometheus.SmartFee.With(goprom.Labels{"blocks": "2"}).Set(util.ConvertBTCkBToSatVb(feeRate2.Feerate))
+		prometheus.SmartFee.With(goprom.Labels{blocksLabel: "2"}).Set(util.ConvertBTCkBToSatVb(feeRate2.Feerate))
 	}
 	if feeRate5 != nil {
-		prometheus.SmartFee.With(goprom.Labels{"blocks": "5"}).Set(util.ConvertBTCkBToSatVb(feeRate5.Feerate))
+		prometheus.SmartFee.With(goprom.Labels{blocksLabel: "5"}).Set(util.ConvertBTCkBToSatVb(feeRate5.Feerate))
 	}
 	if feeRate20 != nil {
-		prometheus.SmartFee.With(goprom.Labels{"blocks": "20"}).Set(util.ConvertBTCkBToSatVb(feeRate20.Feerate))
+		prometheus.SmartFee.With(goprom.Labels{blocksLabel: "20"}).Set(util.ConvertBTCkBToSatVb(feeRate20.Feerate))
 	}
 
 	// Update mining metrics
-	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "-1"}).Set(hashRateLatest)
-	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "1"}).Set(hashRate1)
-	prometheus.MiningHashrate.With(goprom.Labels{"blocks": "120"}).Set(hashRate120)
+	prometheus.MiningHashrate.With(goprom.Labels{blocksLabel: "-1"}).Set(hashRateLatest)
+	prometheus.MiningHashrate.With(goprom.Labels{blocksLabel: "1"}).Set(hashRate1)
+	prometheus.MiningHashrate.With(goprom.Labels{blocksLabel: "120"}).Set(hashRate120)
 }

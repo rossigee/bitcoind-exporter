@@ -17,6 +17,10 @@ const (
 	defaultBackoffFactor = 2.0
 	jitterModulus        = 1000
 	jitterMultiplier     = 2
+
+	logFieldComponent = "component"
+	logFieldOperation = "operation"
+	logFieldError     = "error"
 )
 
 // RetryableError represents an error that can be retried
@@ -52,7 +56,7 @@ func NewErrorHandler() *DefaultErrorHandler {
 		backoffFactor: defaultBackoffFactor,
 		jitterEnabled: true,
 		logger: logrus.WithFields(logrus.Fields{
-			"component": "error_handler",
+			logFieldComponent: "error_handler",
 		}),
 	}
 }
@@ -64,8 +68,8 @@ func (h *DefaultErrorHandler) HandleError(operation string, err error) error {
 	}
 
 	h.logger.WithFields(logrus.Fields{
-		"operation": operation,
-		"error":     err.Error(),
+		logFieldOperation: operation,
+		logFieldError:     err.Error(),
 	}).Debug("Handling error")
 
 	// Log different error types with appropriate levels
@@ -141,9 +145,9 @@ func (h *DefaultErrorHandler) WithRetry(ctx context.Context, operation string, f
 		// Check if we should retry
 		if !h.ShouldRetry(err) {
 			h.logger.WithFields(logrus.Fields{
-				"operation": operation,
-				"attempt":   attempt + 1,
-				"error":     err.Error(),
+				logFieldOperation: operation,
+				"attempt":         attempt + 1,
+				logFieldError:     err.Error(),
 			}).Info("Error is not retryable, giving up")
 			return err
 		}
@@ -151,9 +155,9 @@ func (h *DefaultErrorHandler) WithRetry(ctx context.Context, operation string, f
 		// Check if we've reached max retries
 		if attempt == h.maxRetries-1 {
 			h.logger.WithFields(logrus.Fields{
-				"operation":   operation,
-				"max_retries": h.maxRetries,
-				"final_error": err.Error(),
+				logFieldOperation: operation,
+				"max_retries":     h.maxRetries,
+				"final_error":     err.Error(),
 			}).Error("Max retries reached, giving up")
 			return &RetryableError{Err: err, Attempt: attempt + 1}
 		}
@@ -161,10 +165,10 @@ func (h *DefaultErrorHandler) WithRetry(ctx context.Context, operation string, f
 		// Calculate delay and wait
 		delay := h.GetRetryDelay(attempt)
 		h.logger.WithFields(logrus.Fields{
-			"operation": operation,
-			"attempt":   attempt + 1,
-			"delay":     delay,
-			"error":     err.Error(),
+			logFieldOperation: operation,
+			"attempt":         attempt + 1,
+			"delay":           delay,
+			logFieldError:     err.Error(),
 		}).Info("Retrying after delay")
 
 		select {
@@ -322,7 +326,7 @@ func NewCircuitBreaker(maxFailures int, resetTimeout time.Duration) *CircuitBrea
 		resetTimeout: resetTimeout,
 		state:        CircuitClosed,
 		logger: logrus.WithFields(logrus.Fields{
-			"component": "circuit_breaker",
+			logFieldComponent: "circuit_breaker",
 		}),
 	}
 }

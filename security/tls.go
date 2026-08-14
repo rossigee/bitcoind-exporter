@@ -17,6 +17,8 @@ const (
 	defaultWriteTimeout      = 10 * time.Second // HTTP write timeout
 	defaultIdleTimeout       = 60 * time.Second // HTTP idle timeout
 	defaultReadHeaderTimeout = 5 * time.Second  // HTTP read header timeout
+
+	logFieldComponent = "component"
 )
 
 // TLSConfig holds TLS configuration options
@@ -55,7 +57,7 @@ func NewSecureServer(addr string, handler http.Handler, tlsConfig *TLSConfig) *S
 	return &SecureServer{
 		server: server,
 		logger: logrus.WithFields(logrus.Fields{
-			"component": "secure_server",
+			logFieldComponent: "secure_server",
 		}),
 	}
 }
@@ -139,7 +141,7 @@ func NewAuthMiddleware(username, password string) *AuthMiddleware {
 		username: username,
 		password: password,
 		logger: logrus.WithFields(logrus.Fields{
-			"component": "auth_middleware",
+			logFieldComponent: "auth_middleware",
 		}),
 	}
 }
@@ -226,7 +228,7 @@ func NewRateLimiter(config *RateLimitConfig) *RateLimiter {
 		clients:     make(map[string]*clientState),
 		lastCleanup: time.Now(),
 		logger: logrus.WithFields(logrus.Fields{
-			"component": "rate_limiter",
+			logFieldComponent: "rate_limiter",
 		}),
 	}
 }
