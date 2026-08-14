@@ -2,8 +2,6 @@ module github.com/rossigee/bitcoind-exporter
 
 go 1.26.6
 
-toolchain go1.26.3
-
 require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/go-zeromq/zmq4 v0.17.0
