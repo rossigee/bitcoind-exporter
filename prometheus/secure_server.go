@@ -81,7 +81,7 @@ func StartSecure(ctx context.Context) {
 	// Shut down gracefully when the process context is canceled.
 	go func() {
 		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 		defer cancel()
 		secureLog.Info("Shutting down metrics server")
 		if err := secureServer.Shutdown(shutdownCtx); err != nil {
