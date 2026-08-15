@@ -4,12 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"time"
-)
-
-// Mock configuration constants
-const (
-	mockRetryDelayMilliseconds = 100 // Mock retry delay in milliseconds
 )
 
 // MockBitcoinRPCClient is a mock implementation of BitcoinRPCClient for testing
@@ -218,97 +212,4 @@ func (m *MockBitcoinRPCClient) Reset() {
 	m.responses = make(map[string]interface{})
 	m.errors = make(map[string]error)
 	m.callCount = make(map[string]int)
-}
-
-// MockMetricsCollector is a mock implementation of MetricsCollector for testing
-type MockMetricsCollector struct {
-	BlockchainUpdates int
-	MempoolUpdates    int
-	MemoryUpdates     int
-	IndexUpdates      int
-	NetworkUpdates    int
-	FeeUpdates        int
-	MiningUpdates     int
-	ScrapeUpdates     int
-	LastScrapeTime    time.Duration
-}
-
-// NewMockMetricsCollector creates a new mock metrics collector
-func NewMockMetricsCollector() *MockMetricsCollector {
-	return &MockMetricsCollector{}
-}
-
-func (m *MockMetricsCollector) UpdateBlockchainMetrics(info *BlockchainInfo) {
-	m.BlockchainUpdates++
-}
-
-func (m *MockMetricsCollector) UpdateMempoolMetrics(info *MempoolInfo) {
-	m.MempoolUpdates++
-}
-
-func (m *MockMetricsCollector) UpdateMemoryMetrics(info *MemoryInfo) {
-	m.MemoryUpdates++
-}
-
-func (m *MockMetricsCollector) UpdateIndexMetrics(info *IndexInfo) {
-	m.IndexUpdates++
-}
-
-func (m *MockMetricsCollector) UpdateNetworkMetrics(info *NetworkInfo, totals *NetTotals) {
-	m.NetworkUpdates++
-}
-
-func (m *MockMetricsCollector) UpdateFeeMetrics(feeRate2, feeRate5, feeRate20 *SmartFee) {
-	m.FeeUpdates++
-}
-
-func (m *MockMetricsCollector) UpdateMiningMetrics(hashRateLatest, hashRate1, hashRate120 float64) {
-	m.MiningUpdates++
-}
-
-func (m *MockMetricsCollector) UpdateScrapeTime(duration time.Duration) {
-	m.ScrapeUpdates++
-	m.LastScrapeTime = duration
-}
-
-// Reset clears all counters
-func (m *MockMetricsCollector) Reset() {
-	m.BlockchainUpdates = 0
-	m.MempoolUpdates = 0
-	m.MemoryUpdates = 0
-	m.IndexUpdates = 0
-	m.NetworkUpdates = 0
-	m.FeeUpdates = 0
-	m.MiningUpdates = 0
-	m.ScrapeUpdates = 0
-	m.LastScrapeTime = 0
-}
-
-// MockErrorHandler is a mock implementation of ErrorHandler for testing
-type MockErrorHandler struct {
-	ShouldRetryResult bool
-	RetryDelay        time.Duration
-	HandledErrors     []error
-}
-
-// NewMockErrorHandler creates a new mock error handler
-func NewMockErrorHandler() *MockErrorHandler {
-	return &MockErrorHandler{
-		ShouldRetryResult: true,
-		RetryDelay:        time.Millisecond * mockRetryDelayMilliseconds,
-		HandledErrors:     make([]error, 0),
-	}
-}
-
-func (m *MockErrorHandler) HandleError(operation string, err error) error {
-	m.HandledErrors = append(m.HandledErrors, err)
-	return err
-}
-
-func (m *MockErrorHandler) ShouldRetry(err error) bool {
-	return m.ShouldRetryResult
-}
-
-func (m *MockErrorHandler) GetRetryDelay(attempt int) time.Duration {
-	return m.RetryDelay
 }

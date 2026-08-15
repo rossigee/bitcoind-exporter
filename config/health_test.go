@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -321,9 +323,16 @@ func TestHealthStatus_String(t *testing.T) {
 }
 
 func TestConfigHealthMonitor_CheckRPCConnectivity(t *testing.T) {
+	// Use a local server that returns 401 (like bitcoind would for an
+	// unauthenticated probe) so the test is deterministic and offline-safe.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
 	cfg := &Config{
 		RPC: RPCConfig{
-			Address: "http://httpbin.org/status/401", // Returns 401 Unauthorized
+			Address: server.URL, // Returns 401 Unauthorized
 		},
 	}
 

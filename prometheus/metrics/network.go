@@ -5,20 +5,26 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+const (
+	helpConnections    = "The total number of peer connections"
+	helpConnectionsIn  = "The number of inbound peer connections"
+	helpConnectionsOut = "The number of outbound peer connections"
+)
+
 var (
 	TotalConnections = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_total_connections",
-		Help: helpBlocks,
+		Help: helpConnections,
 	})
 
 	ConnectionsIn = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_connections_in",
-		Help: helpHeaders,
+		Help: helpConnectionsIn,
 	})
 
 	ConnectionsOut = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bitcoind_connections_out",
-		Help: helpHeaders,
+		Help: helpConnectionsOut,
 	})
 
 	TotalBytesRecv = promauto.NewGauge(prometheus.GaugeOpts{

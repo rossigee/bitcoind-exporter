@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 // Security configuration constants
 const (
 	minPasswordLength = 8     // Minimum password length
-	ipv4Parts         = 4     // Number of parts in IPv4 address
 	tlsVersion13      = "1.3" // Minimum supported TLS version
 )
 
@@ -188,33 +186,18 @@ func contains(slice []string, item string) bool {
 }
 
 func isValidIP(ip string) bool {
-	// Basic IP validation - accepts IPv4, IPv6, and CIDR notation
 	if ip == "" {
 		return false
 	}
 
-	// Remove CIDR suffix if present
-	if idx := strings.Index(ip, "/"); idx != -1 {
-		ip = ip[:idx]
+	// CIDR notation: require a parseable network
+	if strings.Contains(ip, "/") {
+		_, _, err := net.ParseCIDR(ip)
+		return err == nil
 	}
 
-	// Check for IPv4
-	parts := strings.Split(ip, ".")
-	if len(parts) == ipv4Parts {
-		for _, part := range parts {
-			if num, err := strconv.Atoi(part); err != nil || num < 0 || num > 255 {
-				return false
-			}
-		}
-		return true
-	}
-
-	// Check for IPv6 (basic check)
-	if strings.Contains(ip, ":") && len(ip) >= 2 {
-		return true // Simplified IPv6 validation
-	}
-
-	return false
+	// Plain IPv4 or IPv6 address
+	return net.ParseIP(ip) != nil
 }
 
 // GetSecurityHeaders returns recommended security headers

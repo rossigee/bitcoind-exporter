@@ -24,7 +24,8 @@ This tool is configured via environment variables. Some environment variables ar
 | `RPC_COOKIE_FILE`       | The path to the cookie file                                                                                                                       | ✅       |         |
 | `ZMQ_ADDRESS`           | The address to the ZeroMQ interface of the Bitcoin Fullnode. This variable is required to determine the transcation rates. e.g. `127.0.0.1:28333` | ❌       |         |
 | `FETCH_INTERVAL`        | The interval at which the metrics are to be recalculated.                                                                                         | ❌       | `10`    |
-| `METRIC_PORT`           | The port via which the metrics are provided.                                                                                                      | ❌       | `3000`  |
+| `METRICS_PORT`          | The port via which the metrics are provided. (`METRIC_PORT` is accepted as a legacy alias)                                                       | ❌       | `3000`  |
+| `METRICS_PATH`          | The path via which the metrics are provided.                                                                                                      | ❌       | `/metrics` |
 | `LOG_LEVEL`             | The log level for the service                                                                                                                     | ❌       | `info`  |
 | `TLS_ENABLED`           | Enable HTTPS with TLS encryption                                                                                                                  | ❌       | `false` |
 | `TLS_CERT_FILE`         | Path to TLS certificate file                                                                                                                      | ❌       |         |

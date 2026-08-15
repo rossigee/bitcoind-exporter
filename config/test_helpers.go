@@ -25,7 +25,18 @@ const (
 	localhostIPv4Byte3 = 127
 	// Environment variable split parts
 	envSplitParts = 2
+	// Cookie file permission bits
+	testCookieFileMode = 0o600
 )
+
+// createTestCookieFile writes a valid bitcoind-style cookie file in a temp dir
+// and returns its path.
+func createTestCookieFile(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "cookie")
+	require.NoError(t, os.WriteFile(path, []byte("testuser:testpass"), testCookieFileMode))
+	return path
+}
 
 // createTestCertificates creates valid test certificate and key files for testing
 func createTestCertificates(t *testing.T) (certFile, keyFile string) {

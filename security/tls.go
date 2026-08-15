@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"crypto/subtle"
 	"crypto/tls"
 	"net"
@@ -71,6 +72,12 @@ func (s *SecureServer) ListenAndServe(tlsConfig *TLSConfig) error {
 
 	s.logger.Warn("Starting HTTP server (TLS disabled)")
 	return s.server.ListenAndServe()
+}
+
+// Shutdown gracefully shuts down the HTTP server, waiting up to the context
+// deadline for in-flight requests to complete.
+func (s *SecureServer) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
 
 // createTLSConfig creates a secure TLS configuration

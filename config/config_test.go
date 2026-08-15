@@ -62,14 +62,14 @@ func TestLoadConfiguration_CookieAuth(t *testing.T) {
 
 	os.Clearenv()
 	_ = os.Setenv("RPC_ADDRESS", "http://127.0.0.1:8332")
-	_ = os.Setenv("RPC_COOKIE_FILE", "/path/to/.cookie")
+	cookiePath := createTestCookieFile(t)
+	_ = os.Setenv("RPC_COOKIE_FILE", cookiePath)
 
-	// This test verifies the configuration loads without panicking
-	// The actual cookie file validation happens in the client
+	// This test verifies the configuration loads without panicking.
 	loadConfiguration()
 
 	assert.Equal(t, "http://127.0.0.1:8332", C.RPCAddress)
-	assert.Equal(t, "/path/to/.cookie", C.RPCCookieFile)
+	assert.Equal(t, cookiePath, C.RPCCookieFile)
 	assert.Empty(t, C.RPCUser)
 	assert.Empty(t, C.RPCPass)
 }
@@ -167,7 +167,11 @@ func runValidationTest(t *testing.T, tt struct {
 	oldEnv := os.Environ()
 	defer restoreEnvironment(oldEnv)
 
-	setupTestEnvironment(tt.rpcUser, tt.rpcPass, tt.cookieFile)
+	cookiePath := tt.cookieFile
+	if tt.cookieFile != "" {
+		cookiePath = createTestCookieFile(t)
+	}
+	setupTestEnvironment(tt.rpcUser, tt.rpcPass, cookiePath)
 
 	if tt.shouldPanic {
 		testPanicScenario(t)

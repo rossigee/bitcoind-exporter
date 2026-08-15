@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -69,6 +70,8 @@ type config struct {
 	FetchInterval int `env:"FETCH_INTERVAL" envDefault:"10"`
 	MetricPort    int `env:"METRIC_PORT" envDefault:"3000"`
 
+	MetricsPath string `env:"METRICS_PATH" envDefault:"/metrics"`
+
 	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
 }
 
@@ -111,7 +114,7 @@ func InitializeConfig() {
 		},
 		Metrics: MetricsConfig{
 			Port:          C.MetricPort,
-			Path:          defaultMetricsPath,
+			Path:          C.MetricsPath,
 			FetchInterval: time.Duration(C.FetchInterval) * time.Second,
 		},
 		Security: Security,
@@ -260,6 +263,12 @@ func ReloadConfig() error {
 
 // Legacy function for backward compatibility
 func loadConfiguration() {
+	// Backward compatibility: METRICS_PORT is the documented name, but
+	// METRIC_PORT was the original. METRIC_PORT wins if both are set.
+	if os.Getenv("METRIC_PORT") == "" && os.Getenv("METRICS_PORT") != "" {
+		_ = os.Setenv("METRIC_PORT", os.Getenv("METRICS_PORT"))
+	}
+
 	if config, err := env.ParseAs[config](); err == nil {
 		log.Debug("Legacy configuration loaded")
 		C = config
@@ -277,6 +286,17 @@ func loadConfiguration() {
 	if (C.RPCUser != "" || C.RPCPass != "") && (C.RPCUser == "" || C.RPCPass == "") && C.RPCCookieFile == "" {
 		log.Error("Both RPC_USER and RPC_PASS must be provided when using username/password authentication")
 		panic("Both RPC_USER and RPC_PASS must be provided when using username/password authentication")
+	}
+
+	// Fail fast at boot if the cookie file is not readable; a broken cookie
+	// file must not take down the process later via the HTTP handlers.
+	if C.RPCCookieFile != "" {
+		f, err := os.Open(C.RPCCookieFile) // #nosec G304 -- path is operator-configured
+		if err != nil {
+			log.WithError(err).Errorf("RPC_COOKIE_FILE is not readable: %s", C.RPCCookieFile)
+			panic("RPC_COOKIE_FILE is not readable")
+		}
+		_ = f.Close()
 	}
 }
 

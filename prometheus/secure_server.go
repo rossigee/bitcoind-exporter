@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 // Configuration constants
 const (
 	readinessTimeoutSeconds = 5 // Timeout for readiness check RPC call
+	shutdownTimeout         = 5 * time.Second
 )
 
 var (
@@ -25,8 +27,9 @@ var (
 	})
 )
 
-// StartSecure starts the Prometheus metrics server with security features
-func StartSecure() {
+// StartSecure starts the Prometheus metrics server with security features.
+// It shuts down gracefully when ctx is canceled.
+func StartSecure(ctx context.Context) {
 	port := strconv.Itoa(config.C.MetricPort)
 
 	secureLog.WithField("port", port).Info("Starting secure Prometheus metrics server")
@@ -60,15 +63,34 @@ func StartSecure() {
 
 	// Create route handler with health checks
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", secureHandler)
+	metricsPath := config.C.MetricsPath
+	if metricsPath == "" {
+		metricsPath = "/metrics"
+	}
+	mux.Handle(metricsPath, secureHandler)
 	mux.HandleFunc("/health", healthCheckHandler)
 	mux.HandleFunc("/ready", readinessCheckHandler)
 
+	// Apply IP-based access control to every endpoint (including /health and
+	// /ready) so configured allow/deny lists are actually enforced.
+	handler := IPFilterMiddleware(mux)
+
 	// Create secure server
-	secureServer := security.NewSecureServer(":"+port, mux, securityConfig.TLS)
+	secureServer := security.NewSecureServer(":"+port, handler, securityConfig.TLS)
+
+	// Shut down gracefully when the process context is canceled.
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		secureLog.Info("Shutting down metrics server")
+		if err := secureServer.Shutdown(shutdownCtx); err != nil {
+			secureLog.WithError(err).Error("Failed to shut down metrics server")
+		}
+	}()
 
 	// Start server
-	if err := secureServer.ListenAndServe(securityConfig.TLS); err != nil {
+	if err := secureServer.ListenAndServe(securityConfig.TLS); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		secureLog.WithError(err).Error("Failed to start secure Prometheus metrics server")
 	}
 }

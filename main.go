@@ -1,7 +1,13 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
+	"time"
 
 	"github.com/rossigee/bitcoind-exporter/config"
 	"github.com/rossigee/bitcoind-exporter/fetcher"
@@ -14,6 +20,7 @@ import (
 // Logger configuration constants
 const (
 	logFormatterSpacePadding = 45 // Space padding for log formatter
+	healthCheckTimeout       = 5 * time.Second
 )
 
 // setupLogging configures the logging system
@@ -36,6 +43,10 @@ func setupLogging() {
 }
 
 func main() {
+	healthCheck := flag.Bool("health-check", false,
+		"Perform a one-shot bitcoind RPC connectivity check and exit (used by container healthchecks)")
+	flag.Parse()
+
 	config.InitializeConfig()
 	setupLogging()
 	log.WithFields(log.Fields{
@@ -45,8 +56,35 @@ func main() {
 		"arch":    runtime.GOARCH,
 	}).Infof("Bitcoind Exporter ₿ %s", version)
 
-	go prometheus.StartSecure()
-	go zmq.Start()
+	if *healthCheck {
+		os.Exit(runHealthCheck())
+	}
 
-	fetcher.StartResilient()
+	// Graceful shutdown on SIGINT/SIGTERM: all servers observe ctx and stop
+	// cleanly, giving in-flight requests a chance to complete.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go prometheus.StartSecure(ctx)
+	go zmq.Start(ctx)
+
+	fetcher.StartResilient(ctx)
+}
+
+// runHealthCheck performs a lightweight RPC connectivity check and returns the
+// process exit code (0 = healthy). It intentionally does not start the metrics
+// or ZMQ servers.
+func runHealthCheck() int {
+	client := fetcher.NewClient()
+	ctx, cancel := context.WithTimeout(context.Background(), healthCheckTimeout)
+	defer cancel()
+
+	var blockCount int64
+	if err := client.RpcClient.CallFor(ctx, &blockCount, "getblockcount"); err != nil {
+		log.WithError(err).Error("Health check failed: bitcoind RPC unavailable")
+		return 1
+	}
+
+	log.WithField("block_count", blockCount).Info("Health check passed")
+	return 0
 }

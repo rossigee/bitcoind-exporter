@@ -141,14 +141,6 @@ linters:
           - lll
           - gocritic
 
-      - path: fetcher/mocks\.go
-        linters:
-          - unused
-
-      - path: fetcher/interfaces\.go
-        linters:
-          - unused
-
       - text: "weak cryptographic primitive"
         linters:
           - gosec

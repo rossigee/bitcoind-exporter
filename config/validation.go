@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -14,7 +15,6 @@ import (
 const (
 	minZMQAddressParts = 3     // Minimum parts in ZMQ address
 	maxRateLimit       = 10000 // Maximum rate limit warning threshold
-	maxCIDRParts       = 2     // Expected parts in CIDR notation
 
 	logLevelInfo   = "info"
 	envDevelopment = "development"
@@ -387,35 +387,16 @@ func (v *Validator) validateCrossFieldDependencies(cfg *Config, result *Validati
 
 // isValidIPOrCIDR validates IP address or CIDR notation
 func (v *Validator) isValidIPOrCIDR(ipStr string) bool {
-	// Simple regex for IP validation (IPv4)
-	ipRegex := regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}(/\d{1,2})?$`)
-	if !ipRegex.MatchString(ipStr) {
+	if ipStr == "" {
 		return false
 	}
 
-	// Validate IP parts
-	parts := strings.Split(strings.Split(ipStr, "/")[0], ".")
-	for _, part := range parts {
-		num, err := strconv.Atoi(part)
-		if err != nil || num < 0 || num > 255 {
-			return false
-		}
-	}
-
-	// Validate CIDR if present
 	if strings.Contains(ipStr, "/") {
-		cidrParts := strings.Split(ipStr, "/")
-		if len(cidrParts) != maxCIDRParts {
-			return false
-		}
-
-		cidr, err := strconv.Atoi(cidrParts[1])
-		if err != nil || cidr < 0 || cidr > 32 {
-			return false
-		}
+		_, _, err := net.ParseCIDR(ipStr)
+		return err == nil
 	}
 
-	return true
+	return net.ParseIP(ipStr) != nil
 }
 
 // ValidateAndReport validates configuration and returns formatted report

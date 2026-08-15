@@ -17,10 +17,20 @@ import (
 const (
 	circuitBreakerMaxFailures = 5               // Maximum failures before circuit breaker opens
 	circuitBreakerResetTime   = time.Minute * 2 // Circuit breaker reset timeout
-	totalRPCCallChannelSize   = 11              // Total number of RPC calls
+	totalRPCCallChannelSize   = 12              // Total number of RPC calls
 	maxAllowedFailures        = 6               // Maximum allowed failures before error
 
 	blocksLabel = "blocks"
+
+	// Fee estimation blocks
+	feeEstimation2Blocks  = 2  // Fast confirmation
+	feeEstimation5Blocks  = 5  // Medium confirmation
+	feeEstimation20Blocks = 20 // Slow confirmation
+
+	// Hash rate estimation blocks
+	hashRateLatest    = -1  // Latest hash rate
+	hashRate1Block    = 1   // 1 block average
+	hashRate120Blocks = 120 // 120 block average (~20 hours)
 
 	resultNameBlockchain = "blockchain"
 	resultNameMempool    = "mempool"
@@ -63,20 +73,37 @@ func NewResilientRunner() *ResilientRunner {
 	}
 }
 
-// StartResilient starts the resilient fetcher loop
-func StartResilient() {
+// fetchContextTimeout returns the per-scrape RPC timeout. It must never be
+// zero (a zero timeout makes every RPC call fail immediately), which is why the
+// legacy `FetchInterval-1` seconds calculation is not used.
+func fetchContextTimeout() time.Duration {
+	d := time.Duration(config.C.FetchInterval) * time.Second
+	if d < time.Second {
+		d = time.Second
+	}
+	return d
+}
+
+// StartResilient starts the resilient fetcher loop. It stops cleanly when ctx
+// is canceled.
+func StartResilient(ctx context.Context) {
 	runner := NewResilientRunner()
 
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.C.FetchInterval-1)*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, fetchContextTimeout())
 
-		err := runner.runWithResilience(ctx)
+		err := runner.runWithResilience(runCtx)
 		if err != nil {
 			runner.logger.WithError(err).Error("Failed to collect metrics")
 		}
-
 		cancel()
-		time.Sleep(time.Duration(config.C.FetchInterval) * time.Second)
+
+		select {
+		case <-ctx.Done():
+			runner.logger.Info("Shutting down resilient fetcher")
+			return
+		case <-time.After(time.Duration(config.C.FetchInterval) * time.Second):
+		}
 	}
 }
 
@@ -98,7 +125,7 @@ func (r *ResilientRunner) runWithResilience(ctx context.Context) error {
 // collectAllMetrics collects all metrics with concurrent execution and error handling
 func (r *ResilientRunner) collectAllMetrics(ctx context.Context) error {
 	// Create a context with timeout for all operations
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.C.FetchInterval-1)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, fetchContextTimeout())
 	defer cancel()
 
 	// Execute concurrent fetching
@@ -443,10 +470,13 @@ func (r *ResilientRunner) updateMetrics(blockchainInfo *BlockchainInfo, mempoolI
 		prometheus.TxIndexBestHeight.Set(float64(indexInfo.TxIndex.BestBlockHeight))
 	}
 
-	if networkInfo != nil && netTotals != nil {
+	if networkInfo != nil {
 		prometheus.TotalConnections.Set(float64(networkInfo.TotalConnections))
 		prometheus.ConnectionsIn.Set(float64(networkInfo.ConnectionsIn))
-		prometheus.ConnectionsOut.Set(float64(networkInfo.TotalConnections - networkInfo.ConnectionsIn))
+		prometheus.ConnectionsOut.Set(float64(networkInfo.ConnectionsOut))
+	}
+
+	if netTotals != nil {
 		prometheus.TotalBytesRecv.Set(float64(netTotals.TotalBytesRecv))
 		prometheus.TotalBytesSent.Set(float64(netTotals.TotalBytesSent))
 	}

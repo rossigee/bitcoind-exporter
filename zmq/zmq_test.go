@@ -25,7 +25,7 @@ func TestStart_NoZmqAddress(t *testing.T) {
 	// and completes quickly when no address is set
 	done := make(chan bool, 1)
 	go func() {
-		Start()
+		Start(context.Background())
 		done <- true
 	}()
 
@@ -116,7 +116,7 @@ func TestStart_ConfigurationHandling(t *testing.T) {
 			if !tt.shouldStart {
 				done := make(chan bool, 1)
 				go func() {
-					Start()
+					Start(context.Background())
 					done <- true
 				}()
 
