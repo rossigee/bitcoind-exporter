@@ -1,7 +1,7 @@
 package main
 
 var (
-	version = "dev"
+	version = "v1.5.0"
 	commit  = "none"
 	date    = "unknown"
 )
