@@ -61,9 +61,11 @@ test-integration: ## Run integration tests
 benchmark: ## Run benchmarks
 	$(GOTEST) -bench=. -benchmem -run=^$$ ./...
 
+GOLANGCI_LINT_VERSION ?= v2.14.0
+
 ## Quality
 lint: ## Run linter
-	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
+	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
 	golangci-lint run --timeout 5m
 
 lint-fix: ## Run linter with auto-fix
@@ -139,7 +141,7 @@ format: ## Format code
 	goimports -w .
 
 install-tools: ## Install development tools
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	go install github.com/securego/gosec/v2/cmd/gosec@latest
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 	go install github.com/cosmtrek/air@latest

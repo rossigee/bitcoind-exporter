@@ -3,7 +3,7 @@
 **Prometheus metrics for a bitcoin node made simple**
 
 ![Build](https://img.shields.io/github/actions/workflow/status/rossigee/bitcoind-exporter/ci.yml?branch=master)
-![Go Version](https://img.shields.io/badge/go-1.25-blue.svg)
+![Go Version](https://img.shields.io/badge/go-1.27.1-blue.svg)
 ![Test Coverage](https://img.shields.io/badge/coverage-64.3%25-green.svg)
 ![Security](https://img.shields.io/badge/security-scanned-green.svg)
 ![License](https://img.shields.io/github/license/rossigee/bitcoind-exporter)
