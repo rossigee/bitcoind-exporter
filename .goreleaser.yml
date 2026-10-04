@@ -1,3 +1,5 @@
+version: 2
+
 project_name: bitcoind-exporter
 
 builds:
@@ -15,7 +17,7 @@ builds:
 
 nfpms:
   - id: packages
-    builds:
+    ids:
       - bitcoind-exporter
     package_name: bitcoind-exporter
     file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
@@ -40,27 +42,16 @@ nfpms:
       postinstall: packaging/scripts/postinstall.sh
       preremove: packaging/scripts/preremove.sh
 
-dockers:
-  - image_templates:
-      - "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}-amd64"
-    use: buildx
+dockers_v2:
+  - ids:
+      - bitcoind-exporter
     dockerfile: Dockerfile
-    build_flag_templates:
-      - "--platform=linux/amd64"
-  - image_templates:
-      - "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}-arm64v8"
-    use: buildx
-    goarch: arm64
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--platform=linux/arm64/v8"
-
-docker_manifests:
-  - name_template: "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}"
-    image_templates:
-      - "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}-amd64"
-      - "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}-arm64v8"
-  - name_template: "ghcr.io/rossigee/bitcoind-exporter:latest"
-    image_templates:
-      - "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}-amd64"
-      - "ghcr.io/rossigee/bitcoind-exporter:{{ .Version }}-arm64v8"
+    images:
+      - "ghcr.io/rossigee/bitcoind-exporter"
+    tags:
+      - "{{ .Version }}"
+      - "latest"
+    platforms:
+      - linux/amd64
+      - linux/arm64/v8
+    sbom: false
